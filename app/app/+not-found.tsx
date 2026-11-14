@@ -35,5 +35,6 @@ const styles = StyleSheet.create({
   linkText: {
     color: colors.accent,
     fontSize: 15,
+    fontFamily: 'NotoSansKR_500Medium',
   },
 });

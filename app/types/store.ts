@@ -64,7 +64,7 @@ export interface LocationSearchResult {
 export const CATEGORY_LABELS: Record<Exclude<StoreCategory, 'all'>, string> = {
   sundae: '순대차',
   chicken: '통닭',
-  other: '기타',
+  other: '타코야끼',
 };
 
 export function formatDistance(meters: number): string {

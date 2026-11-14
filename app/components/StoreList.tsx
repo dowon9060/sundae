@@ -1,3 +1,4 @@
+import { Ionicons } from '@expo/vector-icons';
 import {
   ActivityIndicator,
   FlatList,
@@ -6,7 +7,7 @@ import {
   Text,
   View,
 } from 'react-native';
-import { colors, fonts, spacing, typography } from '../constants/theme';
+import { colors, fonts, layout, spacing, typography } from '../constants/theme';
 import type { NearbyStore } from '../types/store';
 import { StoreCard } from './StoreCard';
 
@@ -31,7 +32,10 @@ export function StoreList({
     <View style={styles.container}>
       <View style={styles.header}>
         <Text style={styles.title}>내 주변 판매점</Text>
-        <Text style={styles.sort}>거리순</Text>
+        <View style={styles.sortRow}>
+          <Text style={styles.sort}>거리순</Text>
+          <Ionicons name="swap-vertical" size={14} color={colors.textSecondary} />
+        </View>
       </View>
 
       {loading && stores.length === 0 ? (
@@ -70,13 +74,18 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingHorizontal: spacing.md,
+    paddingHorizontal: layout.screenPadding,
     paddingBottom: spacing.sm,
   },
   title: {
     fontFamily: fonts.bold,
     color: colors.text,
     fontSize: 16,
+  },
+  sortRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 2,
   },
   sort: {
     ...typography.caption,

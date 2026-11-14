@@ -27,6 +27,30 @@ export async function saveLocation(location: SavedLocation): Promise<void> {
   await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(location));
 }
 
+export async function reverseGeocodeAddress(
+  lat: number,
+  lng: number
+): Promise<string> {
+  try {
+    const [place] = await ExpoLocation.reverseGeocodeAsync({
+      latitude: lat,
+      longitude: lng,
+    });
+    const addressParts = [
+      place?.city || place?.region,
+      place?.district,
+      place?.street,
+      place?.name,
+    ].filter(Boolean);
+    if (addressParts.length > 0) {
+      return [...new Set(addressParts)].join(' ');
+    }
+  } catch {
+    // fall through
+  }
+  return `${lat.toFixed(5)}, ${lng.toFixed(5)}`;
+}
+
 export async function requestGpsLocation(): Promise<SavedLocation | null> {
   const { status } = await ExpoLocation.requestForegroundPermissionsAsync();
   if (status !== 'granted') {
@@ -37,21 +61,10 @@ export async function requestGpsLocation(): Promise<SavedLocation | null> {
     accuracy: ExpoLocation.Accuracy.Balanced,
   });
 
-  const [place] = await ExpoLocation.reverseGeocodeAsync({
-    latitude: position.coords.latitude,
-    longitude: position.coords.longitude,
-  });
-
-  const addressParts = [
-    place?.city || place?.region,
-    place?.district,
-    place?.street,
-  ].filter(Boolean);
-
-  const address =
-    addressParts.length > 0
-      ? addressParts.join(' ')
-      : `${position.coords.latitude.toFixed(4)}, ${position.coords.longitude.toFixed(4)}`;
+  const address = await reverseGeocodeAddress(
+    position.coords.latitude,
+    position.coords.longitude
+  );
 
   const saved: SavedLocation = {
     lat: position.coords.latitude,

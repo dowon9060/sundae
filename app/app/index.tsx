@@ -54,7 +54,12 @@ export default function HomeScreen() {
         stores={stores}
         loading={loading || locLoading}
         refreshing={refreshing}
-        error={error}
+        error={
+          error ||
+          (stores.length === 0 && !loading && !locLoading
+            ? '주변에 표시할 판매점이 없습니다.'
+            : null)
+        }
         onRefresh={() => {
           void onRefresh();
         }}

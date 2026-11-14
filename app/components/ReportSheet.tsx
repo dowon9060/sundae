@@ -221,7 +221,7 @@ const styles = StyleSheet.create({
   },
   reasonActive: {
     borderColor: colors.accent,
-    backgroundColor: '#243328',
+    backgroundColor: '#EAF8EE',
   },
   reasonText: {
     fontFamily: fonts.regular,
@@ -259,7 +259,7 @@ const styles = StyleSheet.create({
   },
   primaryButtonText: {
     fontFamily: fonts.bold,
-    color: colors.background,
+    color: '#FFFFFF',
     fontSize: 16,
   },
   cancel: {

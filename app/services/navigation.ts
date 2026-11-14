@@ -60,6 +60,24 @@ export async function openNavigation(
   );
 }
 
+/** 네이버 지도에서 해당 좌표 위치 보기 (앱 → 웹 폴백) */
+export async function openNaverMapPlace(dest: NavDestination): Promise<void> {
+  const encodedName = encodeURIComponent(dest.name);
+  const app = `nmap://map?lat=${dest.lat}&lng=${dest.lng}&zoom=16&appname=sundaecha`;
+  const web = `https://map.naver.com/v5/?c=${dest.lng},${dest.lat},16,0,0,0,dh&title=${encodedName}`;
+
+  const opened = await openUrl(app);
+  if (opened) return;
+
+  const webOpened = await openUrl(web);
+  if (webOpened) return;
+
+  Alert.alert(
+    '지도 열기 실패',
+    '네이버 지도를 열 수 없습니다. 앱 설치 또는 브라우저를 확인해 주세요.'
+  );
+}
+
 export function getNavOptions(): Array<{ key: NavApp; label: string }> {
   return [
     { key: 'naver', label: '네이버지도' },

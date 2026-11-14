@@ -38,7 +38,7 @@ export default function RootLayout() {
 
   return (
     <LocationProvider>
-      <StatusBar style="light" />
+      <StatusBar style="dark" />
       <Stack
         screenOptions={{
           headerStyle: { backgroundColor: colors.background },

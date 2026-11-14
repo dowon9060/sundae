@@ -1,5 +1,5 @@
 import { StyleSheet, Text, View } from 'react-native';
-import { colors, fonts, spacing } from '../constants/theme';
+import { colors, fonts, layout, spacing } from '../constants/theme';
 import type { MenuItem } from '../types/store';
 
 interface Props {
@@ -35,7 +35,7 @@ export function MenuList({ menus }: Props) {
 
 const styles = StyleSheet.create({
   section: {
-    paddingHorizontal: spacing.md,
+    paddingHorizontal: layout.screenPadding,
     paddingVertical: spacing.md,
   },
   title: {

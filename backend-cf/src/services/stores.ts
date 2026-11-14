@@ -31,7 +31,7 @@ export async function listNearbyStores(
   }
 ): Promise<NearbyStoreResult[]> {
   const staleDays = Number(env.LOCATION_STALE_DAYS || '14');
-  const radiusM = opts.radiusM ?? 5000;
+  const radiusM = opts.radiusM ?? 25000;
 
   let query = `
     SELECT

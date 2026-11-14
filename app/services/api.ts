@@ -42,7 +42,7 @@ export async function fetchNearbyStores(params: {
     lat: String(params.lat),
     lng: String(params.lng),
     category: params.category || 'all',
-    radius: String(params.radius ?? 5000),
+    radius: String(params.radius ?? 25000),
   });
   const json = await request<{ data: NearbyStore[] }>(
     `/api/stores/nearby?${qs}`

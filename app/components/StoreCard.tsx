@@ -1,6 +1,6 @@
 import { Ionicons } from '@expo/vector-icons';
-import { Image, Pressable, StyleSheet, Text, View } from 'react-native';
-import { colors, fonts, spacing, typography } from '../constants/theme';
+import { Image, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
+import { colors, fonts, layout, typography } from '../constants/theme';
 import {
   businessStatusLabel,
   formatDistance,
@@ -23,11 +23,13 @@ export function StoreCard({ store, onPress }: Props) {
 
   return (
     <Pressable style={styles.card} onPress={onPress}>
-      {store.photo_url ? (
-        <Image source={{ uri: store.photo_url }} style={styles.thumb} />
-      ) : (
-        <View style={[styles.thumb, styles.thumbPlaceholder]} />
-      )}
+      <View style={styles.thumbWrap}>
+        {store.photo_url ? (
+          <Image source={{ uri: store.photo_url }} style={styles.thumb} />
+        ) : (
+          <View style={[styles.thumb, styles.thumbPlaceholder]} />
+        )}
+      </View>
       <View style={styles.body}>
         <Text style={styles.name} numberOfLines={1}>
           {store.name}
@@ -38,7 +40,11 @@ export function StoreCard({ store, onPress }: Props) {
           </Text>
         ) : null}
         <View style={styles.metaRow}>
-          <Ionicons name="location-sharp" size={12} color={colors.textSecondary} />
+          <Ionicons
+            name="location-sharp"
+            size={12}
+            color={colors.textSecondary}
+          />
           <Text style={styles.meta} numberOfLines={1}>
             {store.location_note || store.address} ·{' '}
             {formatDistance(store.distance_m)}
@@ -59,24 +65,45 @@ export function StoreCard({ store, onPress }: Props) {
 const styles = StyleSheet.create({
   card: {
     flexDirection: 'row',
+    alignItems: 'center',
     backgroundColor: colors.surface,
-    borderRadius: 14,
-    padding: spacing.sm,
-    marginHorizontal: spacing.md,
-    marginBottom: spacing.sm,
-    gap: spacing.sm,
+    borderRadius: layout.cardRadius,
+    padding: layout.cardPadding,
+    marginHorizontal: layout.screenPadding,
+    marginBottom: layout.cardGap,
+    borderWidth: 1,
+    borderColor: colors.border,
+    ...Platform.select({
+      ios: {
+        shadowColor: colors.shadow,
+        shadowOpacity: 0.06,
+        shadowRadius: 8,
+        shadowOffset: { width: 0, height: 2 },
+      },
+      android: {
+        elevation: 2,
+      },
+      default: {},
+    }),
+  },
+  thumbWrap: {
+    width: '48%',
+    aspectRatio: 1,
+    borderRadius: layout.thumbRadius,
+    overflow: 'hidden',
+    backgroundColor: colors.surfaceElevated,
   },
   thumb: {
-    width: 88,
-    height: 88,
-    borderRadius: 10,
-    backgroundColor: colors.surfaceElevated,
+    width: '100%',
+    height: '100%',
   },
   thumbPlaceholder: {},
   body: {
     flex: 1,
     justifyContent: 'center',
-    gap: 3,
+    gap: 4,
+    paddingLeft: 16,
+    paddingRight: 4,
   },
   name: {
     fontFamily: fonts.bold,

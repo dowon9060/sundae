@@ -1,20 +1,22 @@
-/** 목업에서 추출한 색상 */
+/** 화이트 배경 + 목업 구조에 맞춘 라이트 팔레트 */
 export const colors = {
-  background: '#181818',
-  surface: '#2A2A2A',
-  surfaceElevated: '#333333',
-  border: '#3A3A3A',
-  text: '#FFFFFF',
-  textSecondary: '#909094',
-  textMuted: '#6E6E72',
-  accent: '#6BC67F',
-  accentMuted: '#569B65',
-  danger: '#E57373',
-  chip: '#2A2A2A',
-  chipActive: '#333333',
-  chipBorder: '#4A4A4A',
-  mapPlaceholder: '#2F2F2F',
-  overlay: 'rgba(0,0,0,0.55)',
+  background: '#FFFFFF',
+  surface: '#FFFFFF',
+  surfaceElevated: '#F4F4F5',
+  border: '#E6E6E8',
+  text: '#111111',
+  textSecondary: '#8A8A8E',
+  textMuted: '#A0A0A5',
+  accent: '#2FBF5B',
+  accentMuted: '#5AAF6E',
+  danger: '#E14C4C',
+  chip: '#F4F4F5',
+  chipActive: '#FFFFFF',
+  chipBorder: '#D8D8DC',
+  chipBorderActive: '#111111',
+  mapPlaceholder: '#F0F0F2',
+  overlay: 'rgba(0,0,0,0.4)',
+  shadow: '#000000',
 };
 
 export const spacing = {
@@ -23,6 +25,19 @@ export const spacing = {
   md: 16,
   lg: 24,
   xl: 32,
+};
+
+/** 목업 기준 카드·썸네일 크기 */
+export const layout = {
+  screenPadding: 16,
+  cardRadius: 16,
+  cardPadding: 12,
+  cardGap: 10,
+  /** 카드 가로의 약 절반 */
+  thumbSize: 152,
+  thumbRadius: 14,
+  chipRadius: 22,
+  chipHeight: 40,
 };
 
 export const fonts = {

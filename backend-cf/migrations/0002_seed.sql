@@ -5,7 +5,7 @@ INSERT INTO stores (id, name, category, description, photo_url, status, business
     '역삼 순대차',
     'sundae',
     '역삼역 인근에서 영업하는 순대·내장·떡볶이 이동식 판매점',
-    'https://images.unsplash.com/photo-1565299624946-b28f40a0ae38?w=800',
+    'https://images.pexels.com/photos/20122289/pexels-photo-20122289.jpeg?auto=compress&cs=tinysrgb&w=800',
     'active',
     'confirmed_open'
   ),
@@ -14,7 +14,7 @@ INSERT INTO stores (id, name, category, description, photo_url, status, business
     '참숯 통닭차',
     'chicken',
     '강남역 인근 전기구이 통닭 이동식 판매점',
-    'https://images.unsplash.com/photo-1598103442097-8b74394b95c6?w=800',
+    'https://images.pexels.com/photos/2227960/pexels-photo-2227960.jpeg?auto=compress&cs=tinysrgb&w=800',
     'active',
     'unknown'
   );

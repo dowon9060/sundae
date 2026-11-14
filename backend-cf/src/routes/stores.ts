@@ -14,14 +14,14 @@ stores.get('/nearby', async (c) => {
   }
 
   const category = (c.req.query('category') || 'all') as StoreCategory | 'all';
-  const radius = Number(c.req.query('radius') || '5000');
+  const radius = Number(c.req.query('radius') || '25000');
   const excludeStale = c.req.query('exclude_stale') === '1';
 
   const data = await listNearbyStores(c.env, {
     lat,
     lng,
     category,
-    radiusM: Number.isNaN(radius) ? 5000 : radius,
+    radiusM: Number.isNaN(radius) ? 25000 : radius,
     excludeStale,
   });
 

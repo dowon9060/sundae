@@ -1,6 +1,6 @@
 import { Ionicons } from '@expo/vector-icons';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
-import { colors, spacing, typography } from '../constants/theme';
+import { colors, fonts, layout, spacing, typography } from '../constants/theme';
 
 interface Props {
   address: string;
@@ -22,7 +22,11 @@ export function LocationHeader({
           <Text style={styles.address} numberOfLines={1}>
             {address}
           </Text>
-          <Ionicons name="chevron-down" size={16} color={colors.textSecondary} />
+          <Ionicons
+            name="chevron-down"
+            size={16}
+            color={colors.textSecondary}
+          />
         </View>
       </Pressable>
       <Pressable style={styles.gpsButton} onPress={onPressGps} hitSlop={8}>
@@ -37,7 +41,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: spacing.md,
+    paddingHorizontal: layout.screenPadding,
     paddingTop: spacing.sm,
     paddingBottom: spacing.md,
   },
@@ -55,7 +59,9 @@ const styles = StyleSheet.create({
     gap: 6,
   },
   address: {
-    ...typography.title,
+    fontFamily: fonts.bold,
+    fontSize: 18,
+    color: colors.text,
     flexShrink: 1,
   },
   gpsButton: {

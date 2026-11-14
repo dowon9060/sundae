@@ -131,6 +131,8 @@ export default function StoreDetailScreen() {
         <StoreMap
           address={store.address}
           note={store.location_note}
+          lat={store.lat}
+          lng={store.lng}
           onPress={() => setMapOpen(true)}
         />
 
@@ -156,6 +158,9 @@ export default function StoreDetailScreen() {
         visible={mapOpen}
         address={store.address}
         note={store.location_note}
+        lat={store.lat}
+        lng={store.lng}
+        name={store.name}
         onClose={() => setMapOpen(false)}
       />
       <NavigationSheet
@@ -191,7 +196,7 @@ const styles = StyleSheet.create({
   hero: {
     width: '100%',
     height: 220,
-    backgroundColor: colors.surface,
+    backgroundColor: colors.surfaceElevated,
   },
   heroPlaceholder: {},
   info: {
@@ -241,17 +246,19 @@ const styles = StyleSheet.create({
     right: 0,
     bottom: 0,
     padding: spacing.md,
-    backgroundColor: 'rgba(24,24,24,0.94)',
+    backgroundColor: 'rgba(255,255,255,0.96)',
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: colors.border,
   },
   navButton: {
-    backgroundColor: colors.surface,
+    backgroundColor: colors.text,
     borderRadius: 12,
     paddingVertical: 16,
     alignItems: 'center',
   },
   navButtonText: {
     fontFamily: fonts.bold,
-    color: colors.text,
+    color: '#FFFFFF',
     fontSize: 16,
   },
   error: {
