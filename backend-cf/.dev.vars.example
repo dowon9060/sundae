@@ -4,4 +4,5 @@
 # cp .dev.vars.example .dev.vars
 
 ADMIN_KEY=replace-with-a-long-random-local-admin-key
-# SLACK_WEBHOOK_URL=
+# SLACK_WEBHOOK_REGISTRATION_URL=
+# SLACK_WEBHOOK_REPORT_URL=

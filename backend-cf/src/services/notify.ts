@@ -16,10 +16,44 @@ export interface ReportNotifyPayload {
   createdAt: string;
 }
 
+async function postSlackWebhook(
+  webhook: string,
+  text: string,
+  event: string
+): Promise<boolean> {
+  try {
+    const res = await fetch(webhook, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ text }),
+    });
+    if (res.ok) {
+      return true;
+    }
+    console.error(
+      JSON.stringify({
+        level: 'error',
+        message: 'slack_webhook_failed',
+        event,
+        status: res.status,
+      })
+    );
+  } catch (err) {
+    console.error(
+      JSON.stringify({
+        level: 'error',
+        message: 'slack_webhook_error',
+        event,
+        detail: err instanceof Error ? err.message : 'unknown',
+      })
+    );
+  }
+  return false;
+}
+
 /**
- * 제보 알림.
- * 현재는 구조화 로그로 남기고, 이후 Slack Incoming Webhook으로 교체한다.
- * SLACK_WEBHOOK_URL이 있으면 즉시 전송을 시도한다.
+ * 정보 제보(수정) 알림.
+ * SLACK_WEBHOOK_REPORT_URL이 있으면 Slack으로 보낸다.
  */
 export async function notifyStoreReport(
   env: Env,
@@ -35,33 +69,9 @@ export async function notifyStoreReport(
     `시각: ${payload.createdAt}`,
   ].join('\n');
 
-  const webhook = env.SLACK_WEBHOOK_URL?.trim();
-  if (webhook) {
-    try {
-      const res = await fetch(webhook, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ text }),
-      });
-      if (res.ok) {
-        return { notified: true, channel: 'slack' };
-      }
-      console.error(
-        JSON.stringify({
-          level: 'error',
-          message: 'slack_webhook_failed',
-          status: res.status,
-        })
-      );
-    } catch (err) {
-      console.error(
-        JSON.stringify({
-          level: 'error',
-          message: 'slack_webhook_error',
-          detail: err instanceof Error ? err.message : 'unknown',
-        })
-      );
-    }
+  const webhook = env.SLACK_WEBHOOK_REPORT_URL?.trim();
+  if (webhook && (await postSlackWebhook(webhook, text, 'store_report_notify'))) {
+    return { notified: true, channel: 'slack' };
   }
 
   console.log(
@@ -92,6 +102,10 @@ export interface RegistrationNotifyPayload {
   createdAt: string;
 }
 
+/**
+ * 순대차 등록 요청 알림.
+ * SLACK_WEBHOOK_REGISTRATION_URL이 있으면 Slack으로 보낸다.
+ */
 export async function notifyStoreRegistration(
   env: Env,
   payload: RegistrationNotifyPayload
@@ -118,35 +132,12 @@ export async function notifyStoreRegistration(
     `시각: ${payload.createdAt}`,
   ].join('\n');
 
-  const webhook = env.SLACK_WEBHOOK_URL?.trim();
-  if (webhook) {
-    try {
-      const res = await fetch(webhook, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ text }),
-      });
-      if (res.ok) {
-        return { notified: true, channel: 'slack' };
-      }
-      console.error(
-        JSON.stringify({
-          level: 'error',
-          message: 'slack_webhook_failed',
-          event: 'store_registration_notify',
-          status: res.status,
-        })
-      );
-    } catch (err) {
-      console.error(
-        JSON.stringify({
-          level: 'error',
-          message: 'slack_webhook_error',
-          event: 'store_registration_notify',
-          detail: err instanceof Error ? err.message : 'unknown',
-        })
-      );
-    }
+  const webhook = env.SLACK_WEBHOOK_REGISTRATION_URL?.trim();
+  if (
+    webhook &&
+    (await postSlackWebhook(webhook, text, 'store_registration_notify'))
+  ) {
+    return { notified: true, channel: 'slack' };
   }
 
   console.log(

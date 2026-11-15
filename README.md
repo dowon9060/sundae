@@ -62,9 +62,11 @@ npm start
 | PATCH | `/api/admin/stores/:id/location` | 위치 갱신 |
 | PATCH | `/api/admin/stores/:id/hours` | 운영시간 갱신 |
 
-제보 알림은 `SLACK_WEBHOOK_URL`이 있으면 Slack으로 보내고, 없으면 서버 로그로 남깁니다.
+등록·제보 알림은 각각 Slack Webhook이 있으면 보내고, 없으면 서버 로그로 남깁니다.
 ```bash
-cd backend-cf && npx wrangler secret put SLACK_WEBHOOK_URL
+cd backend-cf
+npx wrangler secret put SLACK_WEBHOOK_REGISTRATION_URL  # 순대차 등록
+npx wrangler secret put SLACK_WEBHOOK_REPORT_URL         # 정보 제보(수정)
 ```
 
 주변 검색은 D1에서 좌표를 읽고 서버에서 Haversine 직선거리로 정렬합니다.

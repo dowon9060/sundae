@@ -18,8 +18,10 @@ export interface Env {
    * 로컬 .dev.vars / 배포 secret 으로만 주입한다.
    */
   ADMIN_KEY?: string;
-  /** Slack Incoming Webhook. 없으면 로그로 알림을 남긴다. */
-  SLACK_WEBHOOK_URL?: string;
+  /** 순대차 등록 요청 Slack Incoming Webhook. 없으면 로그. */
+  SLACK_WEBHOOK_REGISTRATION_URL?: string;
+  /** 정보 제보(수정) Slack Incoming Webhook. 없으면 로그. */
+  SLACK_WEBHOOK_REPORT_URL?: string;
 }
 
 export interface StoreReportRow {

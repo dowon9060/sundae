@@ -15,7 +15,8 @@ ENVIRONMENT = "local"
 # ADMIN_KEY 는 저장소에 넣지 마세요.
 # 로컬: backend-cf/.dev.vars (참고: .dev.vars.example)
 # 배포: npx wrangler secret put ADMIN_KEY
-# Slack: npx wrangler secret put SLACK_WEBHOOK_URL
+# Slack: npx wrangler secret put SLACK_WEBHOOK_REGISTRATION_URL
+#        npx wrangler secret put SLACK_WEBHOOK_REPORT_URL
 
 [observability]
 enabled = true
