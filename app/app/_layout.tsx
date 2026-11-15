@@ -6,35 +6,56 @@ import {
 } from '@expo-google-fonts/noto-sans-kr';
 import { Stack } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { StatusBar } from 'expo-status-bar';
+import { AppSplash } from '../components/AppSplash';
 import { colors, fonts } from '../constants/theme';
 import { LocationProvider } from '../context/LocationContext';
 
 export { ErrorBoundary } from 'expo-router';
 
-SplashScreen.preventAutoHideAsync();
+SplashScreen.preventAutoHideAsync().catch(() => {
+  // 이미 숨겨진 경우 무시
+});
+
+/** 푸드트럭 로고를 최소로 보여주는 시간 */
+const SPLASH_MIN_MS = 1200;
 
 export default function RootLayout() {
-  const [loaded, error] = useFonts({
+  const [fontsLoaded, fontError] = useFonts({
     NotoSansKR_400Regular,
     NotoSansKR_500Medium,
     NotoSansKR_700Bold,
   });
+  const [splashDone, setSplashDone] = useState(false);
+  const [minTimeDone, setMinTimeDone] = useState(false);
 
   useEffect(() => {
-    if (error) throw error;
-  }, [error]);
+    if (fontError) throw fontError;
+  }, [fontError]);
 
   useEffect(() => {
-    if (loaded) {
-      SplashScreen.hideAsync();
-    }
-  }, [loaded]);
+    const timer = setTimeout(() => setMinTimeDone(true), SPLASH_MIN_MS);
+    return () => clearTimeout(timer);
+  }, []);
 
-  if (!loaded) {
-    return null;
-  }
+  useEffect(() => {
+    if (!fontsLoaded || !minTimeDone) return;
+    let cancelled = false;
+    (async () => {
+      try {
+        await SplashScreen.hideAsync();
+      } catch {
+        // Expo Go 등에서 실패해도 인앱 스플래시로 대체
+      }
+      if (!cancelled) setSplashDone(true);
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [fontsLoaded, minTimeDone]);
+
+  const showSplash = !splashDone;
 
   return (
     <LocationProvider>
@@ -61,6 +82,7 @@ export default function RootLayout() {
           options={{ title: '판매점 상세', headerBackTitle: '뒤로' }}
         />
       </Stack>
+      {showSplash ? <AppSplash /> : null}
     </LocationProvider>
   );
 }

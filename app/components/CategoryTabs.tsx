@@ -11,9 +11,10 @@ const TABS: { key: StoreCategory; label: string }[] = [
 interface Props {
   value: StoreCategory;
   onChange: (value: StoreCategory) => void;
+  onPressTakoyakiMap?: () => void;
 }
 
-export function CategoryTabs({ value, onChange }: Props) {
+export function CategoryTabs({ value, onChange, onPressTakoyakiMap }: Props) {
   return (
     <View style={styles.wrap}>
       <ScrollView
@@ -25,15 +26,21 @@ export function CategoryTabs({ value, onChange }: Props) {
         {TABS.map((tab) => {
           const active = value === 'all' ? false : tab.key === value;
           return (
-            <Pressable
-              key={tab.key}
-              style={[styles.chip, active && styles.chipActive]}
-              onPress={() => onChange(value === tab.key ? 'all' : tab.key)}
-            >
-              <Text style={[styles.label, active && styles.labelActive]}>
-                {tab.label}
-              </Text>
-            </Pressable>
+            <View key={tab.key} style={styles.tabGroup}>
+              <Pressable
+                style={[styles.chip, active && styles.chipActive]}
+                onPress={() => onChange(value === tab.key ? 'all' : tab.key)}
+              >
+                <Text style={[styles.label, active && styles.labelActive]}>
+                  {tab.label}
+                </Text>
+              </Pressable>
+              {tab.key === 'other' && onPressTakoyakiMap ? (
+                <Pressable style={styles.mapChip} onPress={onPressTakoyakiMap}>
+                  <Text style={styles.mapChipLabel}>지도로 보기</Text>
+                </Pressable>
+              ) : null}
+            </View>
           );
         })}
       </ScrollView>
@@ -54,6 +61,11 @@ const styles = StyleSheet.create({
     gap: 8,
     paddingBottom: spacing.md,
     alignItems: 'center',
+  },
+  tabGroup: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
   },
   chip: {
     height: layout.chipHeight,
@@ -77,5 +89,18 @@ const styles = StyleSheet.create({
   labelActive: {
     color: colors.text,
     fontFamily: fonts.bold,
+  },
+  mapChip: {
+    height: layout.chipHeight,
+    paddingHorizontal: 14,
+    borderRadius: layout.chipRadius,
+    backgroundColor: colors.text,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  mapChipLabel: {
+    fontFamily: fonts.bold,
+    color: '#FFFFFF',
+    fontSize: 13,
   },
 });

@@ -12,6 +12,36 @@ import { haversineMeters, isLocationStale } from './distance';
 
 const DAY_LABELS = ['일', '월', '화', '수', '목', '금', '토'];
 
+/** Workers UTC 기준 → 한국(Asia/Seoul) 요일·날짜 */
+function seoulCalendar() {
+  const parts = new Intl.DateTimeFormat('en-CA', {
+    timeZone: 'Asia/Seoul',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    weekday: 'short',
+  }).formatToParts(new Date());
+
+  const get = (type: string) =>
+    parts.find((p) => p.type === type)?.value ?? '';
+
+  const weekday = get('weekday'); // Sun Mon ...
+  const dayMap: Record<string, number> = {
+    Sun: 0,
+    Mon: 1,
+    Tue: 2,
+    Wed: 3,
+    Thu: 4,
+    Fri: 5,
+    Sat: 6,
+  };
+
+  return {
+    dayOfWeek: dayMap[weekday] ?? 0,
+    dateStr: `${get('year')}-${get('month')}-${get('day')}`,
+  };
+}
+
 type StoreWithLocation = StoreRow & {
   lat: number;
   lng: number;
@@ -27,11 +57,20 @@ export async function listNearbyStores(
     lng: number;
     category?: StoreCategory | 'all';
     radiusM?: number;
+    /** 0=일 … 6=토. 해당 요일 운영(휴무 아님)만 반환 */
+    dayOfWeek?: number;
     excludeStale?: boolean;
   }
 ): Promise<NearbyStoreResult[]> {
   const staleDays = Number(env.LOCATION_STALE_DAYS || '14');
-  const radiusM = opts.radiusM ?? 25000;
+  const radiusM = opts.radiusM ?? 5000;
+  const seoul = seoulCalendar();
+  const dayOfWeek =
+    opts.dayOfWeek != null && opts.dayOfWeek >= 0 && opts.dayOfWeek <= 6
+      ? opts.dayOfWeek
+      : seoul.dayOfWeek;
+  const isSelectedToday = dayOfWeek === seoul.dayOfWeek;
+  const dayLabel = DAY_LABELS[dayOfWeek];
 
   let query = `
     SELECT
@@ -56,10 +95,6 @@ export async function listNearbyStores(
     .bind(...binds)
     .all<StoreWithLocation>();
 
-  const today = new Date();
-  const dayOfWeek = today.getDay();
-  const todayStr = today.toISOString().slice(0, 10);
-
   const results: NearbyStoreResult[] = [];
 
   for (const row of rows.results ?? []) {
@@ -70,6 +105,53 @@ export async function listNearbyStores(
 
     const location_stale = isLocationStale(row.location_updated_at, staleDays);
     if (opts.excludeStale && location_stale) continue;
+
+    const hour = await env.DB.prepare(
+      `SELECT open_time, close_time, is_closed
+       FROM business_hours
+       WHERE store_id = ? AND day_of_week = ?`
+    )
+      .bind(row.id, dayOfWeek)
+      .first<{ open_time: string | null; close_time: string | null; is_closed: number }>();
+
+    let exception: {
+      is_closed: number;
+      open_time: string | null;
+      close_time: string | null;
+    } | null = null;
+
+    if (isSelectedToday) {
+      exception =
+        (await env.DB.prepare(
+          `SELECT is_closed, open_time, close_time
+           FROM schedule_exceptions
+           WHERE store_id = ? AND date = ?`
+        )
+          .bind(row.id, seoul.dateStr)
+          .first<{
+            is_closed: number;
+            open_time: string | null;
+            close_time: string | null;
+          }>()) ?? null;
+    }
+
+    // 요일 탭은 그날 운영시간을 보여 주기 위함 — 휴무도 목록에 포함
+    let is_closed_on_day = false;
+    let today_hours_label: string | null = null;
+
+    if (exception) {
+      if (exception.is_closed || !exception.open_time || !exception.close_time) {
+        is_closed_on_day = true;
+        today_hours_label = `${dayLabel} 휴무`;
+      } else {
+        today_hours_label = `${dayLabel} ${exception.open_time}~${exception.close_time}`;
+      }
+    } else if (!hour || hour.is_closed || !hour.open_time || !hour.close_time) {
+      is_closed_on_day = true;
+      today_hours_label = `${dayLabel} 휴무`;
+    } else {
+      today_hours_label = `${dayLabel} ${hour.open_time}~${hour.close_time}`;
+    }
 
     const menuSummary = await env.DB.prepare(
       `SELECT GROUP_CONCAT(name, ' · ') AS summary
@@ -83,43 +165,23 @@ export async function listNearbyStores(
       .bind(row.id)
       .first<{ summary: string | null }>();
 
-    const hour = await env.DB.prepare(
-      `SELECT open_time, close_time, is_closed
-       FROM business_hours
-       WHERE store_id = ? AND day_of_week = ?`
-    )
-      .bind(row.id, dayOfWeek)
-      .first<{ open_time: string | null; close_time: string | null; is_closed: number }>();
-
-    const exception = await env.DB.prepare(
-      `SELECT is_closed, open_time, close_time
-       FROM schedule_exceptions
-       WHERE store_id = ? AND date = ?`
-    )
-      .bind(row.id, todayStr)
-      .first<{ is_closed: number; open_time: string | null; close_time: string | null }>();
-
-    let today_hours_label: string | null = null;
-    if (exception) {
-      today_hours_label = exception.is_closed
-        ? '오늘 휴무'
-        : `운영 ${exception.open_time}~${exception.close_time}`;
-    } else if (hour) {
-      today_hours_label = hour.is_closed
-        ? '오늘 휴무'
-        : `운영 ${hour.open_time}~${hour.close_time}`;
-    }
-
     results.push({
       ...row,
       distance_m,
       location_stale,
       menu_summary: menuSummary?.summary ?? null,
       today_hours_label,
+      is_closed_on_day,
     });
   }
 
-  results.sort((a, b) => a.distance_m - b.distance_m);
+  // 운영 중인 곳 우선, 같은 그룹 안에서는 거리순
+  results.sort((a, b) => {
+    if (a.is_closed_on_day !== b.is_closed_on_day) {
+      return a.is_closed_on_day ? 1 : -1;
+    }
+    return a.distance_m - b.distance_m;
+  });
   return results;
 }
 

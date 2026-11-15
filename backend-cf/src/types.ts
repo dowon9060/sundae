@@ -84,4 +84,6 @@ export interface NearbyStoreResult extends StoreRow {
   location_stale: boolean;
   menu_summary: string | null;
   today_hours_label: string | null;
+  /** 선택한 요일 기준 휴무 여부 */
+  is_closed_on_day: boolean;
 }

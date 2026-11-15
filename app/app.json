@@ -11,19 +11,24 @@
       "supportsTablet": true,
       "infoPlist": {
         "NSLocationWhenInUseUsageDescription": "주변 이동식 판매점을 찾기 위해 현재 위치가 필요합니다.",
+        "NSPhotoLibraryUsageDescription": "순대차 등록 요청에 메뉴·위치·트럭 사진을 첨부하기 위해 사진 접근이 필요합니다.",
+        "NSCameraUsageDescription": "순대차 등록 요청에 사진을 촬영하기 위해 카메라 접근이 필요합니다.",
         "LSApplicationQueriesSchemes": ["nmap", "kakaomap", "kakaonavi"]
       }
     },
     "android": {
       "adaptiveIcon": {
-        "backgroundColor": "#FFFFFF",
+        "backgroundColor": "#F7F7F8",
         "foregroundImage": "./assets/images/android-icon-foreground.png",
         "backgroundImage": "./assets/images/android-icon-background.png",
         "monochromeImage": "./assets/images/android-icon-monochrome.png"
       },
       "permissions": [
         "ACCESS_COARSE_LOCATION",
-        "ACCESS_FINE_LOCATION"
+        "ACCESS_FINE_LOCATION",
+        "CAMERA",
+        "READ_MEDIA_IMAGES",
+        "READ_EXTERNAL_STORAGE"
       ],
       "predictiveBackGestureEnabled": false
     },
@@ -37,7 +42,8 @@
       [
         "expo-splash-screen",
         {
-          "image": "./assets/images/splash-icon.png",
+          "image": "./assets/images/foodtruck-icon.png",
+          "imageWidth": 200,
           "resizeMode": "contain",
           "backgroundColor": "#FFFFFF"
         }
@@ -46,6 +52,13 @@
         "expo-location",
         {
           "locationWhenInUsePermission": "주변 이동식 판매점을 찾기 위해 현재 위치가 필요합니다."
+        }
+      ],
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "순대차 등록 요청에 메뉴·위치·트럭 사진을 첨부하기 위해 사진 접근이 필요합니다.",
+          "cameraPermission": "순대차 등록 요청에 사진을 촬영하기 위해 카메라 접근이 필요합니다."
         }
       ]
     ],

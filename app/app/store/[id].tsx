@@ -15,6 +15,7 @@ import { MenuList } from '../../components/MenuList';
 import { NavigationSheet } from '../../components/NavigationSheet';
 import { ReportSheet } from '../../components/ReportSheet';
 import { StoreMap } from '../../components/StoreMap';
+import { foodTruckIcon } from '../../constants/images';
 import { colors, fonts, spacing, typography } from '../../constants/theme';
 import { useLocation } from '../../hooks/useLocation';
 import {
@@ -101,11 +102,11 @@ export default function StoreDetailScreen() {
   return (
     <View style={styles.container}>
       <ScrollView contentContainerStyle={styles.scroll}>
-        {store.photo_url ? (
-          <Image source={{ uri: store.photo_url }} style={styles.hero} />
-        ) : (
-          <View style={[styles.hero, styles.heroPlaceholder]} />
-        )}
+        <Image
+          source={store.photo_url ? { uri: store.photo_url } : foodTruckIcon}
+          style={[styles.hero, !store.photo_url && styles.heroPlaceholder]}
+          resizeMode={store.photo_url ? 'cover' : 'contain'}
+        />
 
         <View style={styles.info}>
           <Text style={styles.name}>{store.name}</Text>
@@ -198,7 +199,9 @@ const styles = StyleSheet.create({
     height: 220,
     backgroundColor: colors.surfaceElevated,
   },
-  heroPlaceholder: {},
+  heroPlaceholder: {
+    paddingVertical: 24,
+  },
   info: {
     paddingHorizontal: spacing.md,
     paddingTop: spacing.md,

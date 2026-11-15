@@ -1,6 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { colors, fonts, layout, spacing, typography } from '../constants/theme';
+import { localizeAddressText } from '../services/koreanAddress';
 
 interface Props {
   address: string;
@@ -13,6 +14,8 @@ export function LocationHeader({
   onPressAddress,
   onPressGps,
 }: Props) {
+  const displayAddress = localizeAddressText(address);
+
   return (
     <View style={styles.container}>
       <Pressable style={styles.left} onPress={onPressAddress}>
@@ -20,7 +23,7 @@ export function LocationHeader({
         <View style={styles.addressRow}>
           <Ionicons name="location-sharp" size={16} color={colors.text} />
           <Text style={styles.address} numberOfLines={1}>
-            {address}
+            {displayAddress}
           </Text>
           <Ionicons
             name="chevron-down"
@@ -29,8 +32,14 @@ export function LocationHeader({
           />
         </View>
       </Pressable>
-      <Pressable style={styles.gpsButton} onPress={onPressGps} hitSlop={8}>
-        <Ionicons name="locate-outline" size={22} color={colors.text} />
+      <Pressable
+        style={styles.gpsButton}
+        onPress={onPressGps}
+        hitSlop={8}
+        accessibilityLabel="현위치"
+      >
+        <Ionicons name="locate-outline" size={18} color={colors.text} />
+        <Text style={styles.gpsLabel}>현위치</Text>
       </Pressable>
     </View>
   );
@@ -65,10 +74,17 @@ const styles = StyleSheet.create({
     flexShrink: 1,
   },
   gpsButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
+    minWidth: 52,
+    height: 44,
+    borderRadius: 12,
     alignItems: 'center',
     justifyContent: 'center',
+    gap: 2,
+    paddingHorizontal: 6,
+  },
+  gpsLabel: {
+    fontFamily: fonts.medium,
+    fontSize: 11,
+    color: colors.text,
   },
 });

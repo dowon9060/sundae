@@ -37,12 +37,13 @@ npm start
 
 | Method | Path | 설명 |
 |--------|------|------|
-| GET | `/api/stores/nearby?lat&lng&category&radius` | 주변 판매점 (거리순) |
+| GET | `/api/stores/nearby?lat&lng&category&radius&day` | 주변 판매점 (거리순, 기본 1.5km, day=0일~6토 운영만) |
 | GET | `/api/stores/:id` | 판매점 상세 |
 | GET | `/api/stores/:id/menus` | 메뉴 |
 | GET | `/api/stores/:id/hours` | 요일별 운영시간 |
 | GET | `/api/locations/search?q` | 주소/역 검색 (MVP 정적 후보) |
 | POST | `/api/stores/:id/reports` | 정보 제보 (사유 + 메모) |
+| POST | `/api/stores/registration-requests` | 순대차 등록 요청 (이름·메뉴·오늘날·위치·사진) |
 | PATCH | `/api/admin/stores/:id/location` | 위치 갱신 |
 | PATCH | `/api/admin/stores/:id/hours` | 운영시간 갱신 |
 
@@ -55,11 +56,14 @@ cd backend-cf && npx wrangler secret put SLACK_WEBHOOK_URL
 
 ## MVP 범위
 
-포함: 주변 목록, 카테고리 필터, 위치 저장/검색/GPS, 상세(메뉴·운영시간), 지도 플레이스홀더, 길찾기(네이버/카카오 Linking)
+포함: 주변 목록, 카테고리 필터, 위치 저장/검색/GPS, 상세(메뉴·운영시간), 인앱 네이버 지도(WebView JS API), 길찾기(네이버/카카오 Linking)
 
-미포함: 네이버 지도 SDK, 관리자 웹 UI, 일반 유저 인증, 푸시, 판매자 앱
+미포함: 네이버 지도 네이티브 SDK, 관리자 웹 UI, 일반 유저 인증, 푸시, 판매자 앱
+
+인앱 지도는 `EXPO_PUBLIC_NCP_KEY_ID`(NCP Maps Client ID)가 필요합니다. Web 서비스 URL에 `http://localhost`를 등록하세요.
 
 ## 시드 데이터
 
-- 역삼 순대차 (`store-yeoksam-sundae`)
-- 참숯 통닭차 (`store-gangnam-chicken`)
+- 서울·경기 이동식 + 전국 수집분 (마이그레이션 `0004`~`0009`)
+- 출처 예: 네이버 블로그·카페, 인스타 언급, 티스토리, 전국 푸드트럭 허가구역 지도, 당근·오늘트럭 제보
+- 좌표는 공개 주소·랜드마크 근사치이며, 이동식은 당일 SNS 확인이 필요합니다.

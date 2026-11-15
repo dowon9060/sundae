@@ -1,46 +1,105 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { fetchNearbyStores } from '../services/api';
 import type { NearbyStore, StoreCategory } from '../types/store';
 
-/** 서울 전역 이동식 판매점 커버 (약 25km) */
-const DEFAULT_RADIUS_M = 25000;
+/** 현위치·지정 위치 기준 반경 5km */
+const DEFAULT_RADIUS_M = 5000;
+/** 동일 조건 재요청 최소 간격 */
+const MIN_FETCH_GAP_MS = 5_000;
+
+function roundCoord(n: number): number {
+  return Math.round(n * 1e5) / 1e5;
+}
 
 export function useNearbyStores(
   lat: number | undefined,
   lng: number | undefined,
-  category: StoreCategory
+  category: StoreCategory,
+  dayOfWeek: number,
+  enabled = true
 ) {
+  const rLat = lat == null ? undefined : roundCoord(lat);
+  const rLng = lng == null ? undefined : roundCoord(lng);
+
   const [stores, setStores] = useState<NearbyStore[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const refresh = useCallback(async () => {
-    if (lat == null || lng == null) {
-      setStores([]);
-      return;
-    }
+  const lastKeyRef = useRef('');
+  const lastAtRef = useRef(0);
+  const inflightRef = useRef(false);
+  const seqRef = useRef(0);
 
-    setLoading(true);
-    setError(null);
-    try {
-      const data = await fetchNearbyStores({
-        lat,
-        lng,
-        category,
-        radius: DEFAULT_RADIUS_M,
-      });
-      setStores(data);
-    } catch (e) {
-      setError(e instanceof Error ? e.message : '판매점을 불러오지 못했습니다.');
-      setStores([]);
-    } finally {
-      setLoading(false);
-    }
-  }, [lat, lng, category]);
+  const refresh = useCallback(
+    async (opts?: { force?: boolean }) => {
+      if (!enabled) return;
+      if (rLat == null || rLng == null) {
+        setStores([]);
+        setLoading(false);
+        return;
+      }
+
+      const key = `${rLat}|${rLng}|${category}|${dayOfWeek}`;
+      const now = Date.now();
+
+      if (inflightRef.current && !opts?.force) {
+        return;
+      }
+
+      if (
+        !opts?.force &&
+        key === lastKeyRef.current &&
+        now - lastAtRef.current < MIN_FETCH_GAP_MS
+      ) {
+        return;
+      }
+
+      // force여도 동일 키가 아주 짧은 시간에 반복되면 무시 (루프 방지)
+      if (
+        opts?.force &&
+        key === lastKeyRef.current &&
+        now - lastAtRef.current < 1_500
+      ) {
+        return;
+      }
+
+      lastKeyRef.current = key;
+      lastAtRef.current = now;
+      const seq = ++seqRef.current;
+      inflightRef.current = true;
+      setLoading(true);
+      setError(null);
+
+      try {
+        const data = await fetchNearbyStores({
+          lat: rLat,
+          lng: rLng,
+          category,
+          radius: DEFAULT_RADIUS_M,
+          day: dayOfWeek,
+        });
+        if (seq !== seqRef.current) return;
+        setStores(data);
+      } catch (e) {
+        if (seq !== seqRef.current) return;
+        setError(
+          e instanceof Error ? e.message : '판매점을 불러오지 못했습니다.'
+        );
+        // 실패 시 기존 목록은 유지 (깜빡임·빈 화면 루프 완화)
+      } finally {
+        if (seq === seqRef.current) {
+          inflightRef.current = false;
+          setLoading(false);
+        }
+      }
+    },
+    [rLat, rLng, category, dayOfWeek, enabled]
+  );
 
   useEffect(() => {
+    if (!enabled) return;
     void refresh();
-  }, [refresh]);
+  }, [refresh, enabled]);
 
   return { stores, loading, error, refresh };
 }

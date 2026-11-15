@@ -26,6 +26,7 @@ export interface NearbyStore {
   location_stale: boolean;
   menu_summary: string | null;
   today_hours_label: string | null;
+  is_closed_on_day?: boolean;
 }
 
 export interface StoreDetail extends Omit<NearbyStore, 'distance_m'> {

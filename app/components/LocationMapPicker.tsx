@@ -11,7 +11,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { colors, fonts, layout, spacing, typography } from '../constants/theme';
 import { reverseGeocodeAddress } from '../services/location';
 import { openNaverMapPlace } from '../services/navigation';
-import { OsmMap } from './OsmMap';
+import { NaverMap } from './NaverMap';
 
 interface Props {
   visible: boolean;
@@ -70,10 +70,11 @@ export function LocationMapPicker({
 
         <View style={styles.mapWrap}>
           {visible ? (
-            <OsmMap
+            <NaverMap
               lat={coord.lat}
               lng={coord.lng}
               interactive
+              label="선택 위치"
               onPick={(lat, lng) => setCoord({ lat, lng })}
             />
           ) : null}

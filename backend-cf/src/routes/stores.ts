@@ -1,10 +1,28 @@
 import { Hono } from 'hono';
 import type { Env, StoreCategory } from '../types';
+import { createStoreRegistration } from '../services/registrations';
 import { createStoreReport, isValidReportReason } from '../services/reports';
 import { REPORT_REASON_LABELS } from '../services/notify';
 import { getHours, getMenus, getStoreById, listNearbyStores } from '../services/stores';
 
 const stores = new Hono<{ Bindings: Env }>();
+
+const REG_ERROR_MESSAGES: Record<string, string> = {
+  EMPTY_NAME: '이름을 입력해 주세요.',
+  EMPTY_MENU: '메뉴를 입력해 주세요.',
+  EMPTY_TODAY_HOURS: '오늘 운영 시간을 입력해 주세요.',
+  EMPTY_LOCATION: '위치를 입력해 주세요.',
+  INVALID_NAME: '이름 형식이 올바르지 않습니다.',
+  INVALID_MENU: '메뉴 형식이 올바르지 않습니다.',
+  INVALID_TODAY_HOURS: '오늘 운영 시간 형식이 올바르지 않습니다.',
+  INVALID_LOCATION: '위치 형식이 올바르지 않습니다.',
+  INVALID_PHOTO_MENU: '메뉴 사진 형식이 올바르지 않습니다.',
+  INVALID_PHOTO_LOCATION: '위치 캡쳐 사진 형식이 올바르지 않습니다.',
+  INVALID_PHOTO_TRUCK: '푸드트럭 사진 형식이 올바르지 않습니다.',
+  PHOTO_TOO_LARGE_MENU: '메뉴 사진이 너무 큽니다. 다시 첨부해 주세요.',
+  PHOTO_TOO_LARGE_LOCATION: '위치 캡쳐 사진이 너무 큽니다. 다시 첨부해 주세요.',
+  PHOTO_TOO_LARGE_TRUCK: '푸드트럭 사진이 너무 큽니다. 다시 첨부해 주세요.',
+};
 
 stores.get('/nearby', async (c) => {
   const lat = Number(c.req.query('lat'));
@@ -14,18 +32,81 @@ stores.get('/nearby', async (c) => {
   }
 
   const category = (c.req.query('category') || 'all') as StoreCategory | 'all';
-  const radius = Number(c.req.query('radius') || '25000');
+  const radius = Number(c.req.query('radius') || '5000');
+  const dayRaw = c.req.query('day');
+  const dayParsed = dayRaw != null ? Number(dayRaw) : undefined;
+  const dayOfWeek =
+    dayParsed != null && !Number.isNaN(dayParsed) && dayParsed >= 0 && dayParsed <= 6
+      ? dayParsed
+      : undefined;
   const excludeStale = c.req.query('exclude_stale') === '1';
 
   const data = await listNearbyStores(c.env, {
     lat,
     lng,
     category,
-    radiusM: Number.isNaN(radius) ? 25000 : radius,
+    radiusM: Number.isNaN(radius) ? 5000 : radius,
+    dayOfWeek,
     excludeStale,
   });
 
   return c.json({ data });
+});
+
+stores.post('/registration-requests', async (c) => {
+  let body: Record<string, unknown>;
+  try {
+    body = await c.req.json();
+  } catch {
+    return c.json({ error: '요청 본문을 확인할 수 없습니다.' }, 400);
+  }
+
+  try {
+    const data = await createStoreRegistration(c.env, {
+      name: body.name as string,
+      menu: body.menu as string,
+      today_hours: body.today_hours as string,
+      location_text: body.location_text as string,
+      lat: body.lat as number | null | undefined,
+      lng: body.lng as number | null | undefined,
+      photo_menu: body.photo_menu as string | null | undefined,
+      photo_location: body.photo_location as string | null | undefined,
+      photo_truck: body.photo_truck as string | null | undefined,
+    });
+
+    return c.json(
+      {
+        data: {
+          id: data.id,
+          name: data.name,
+          status: data.status,
+          created_at: data.created_at,
+          has_photo_menu: Boolean(data.has_photo_menu),
+          has_photo_location: Boolean(data.has_photo_location),
+          has_photo_truck: Boolean(data.has_photo_truck),
+        },
+        message: '등록 요청이 접수되었습니다. 확인 후 반영할게요.',
+      },
+      201
+    );
+  } catch (err) {
+    const code = err instanceof Error ? err.message : '';
+    const message = REG_ERROR_MESSAGES[code];
+    if (message) {
+      return c.json({ error: message }, 400);
+    }
+    console.error(
+      JSON.stringify({
+        level: 'error',
+        message: 'store_registration_failed',
+        detail: code || 'unknown',
+      })
+    );
+    return c.json(
+      { error: '등록 요청을 저장하지 못했습니다. 잠시 후 다시 시도해 주세요.' },
+      500
+    );
+  }
 });
 
 stores.get('/:id', async (c) => {

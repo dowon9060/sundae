@@ -77,3 +77,87 @@ export async function notifyStoreReport(
 
   return { notified: true, channel: 'log' };
 }
+
+export interface RegistrationNotifyPayload {
+  requestId: string;
+  name: string;
+  menu: string;
+  todayHours: string;
+  locationText: string;
+  lat: number | null;
+  lng: number | null;
+  hasPhotoMenu: boolean;
+  hasPhotoLocation: boolean;
+  hasPhotoTruck: boolean;
+  createdAt: string;
+}
+
+export async function notifyStoreRegistration(
+  env: Env,
+  payload: RegistrationNotifyPayload
+): Promise<{ notified: boolean; channel: 'slack' | 'log' }> {
+  const photos = [
+    payload.hasPhotoMenu ? '메뉴' : null,
+    payload.hasPhotoLocation ? '위치캡쳐' : null,
+    payload.hasPhotoTruck ? '푸드트럭' : null,
+  ]
+    .filter(Boolean)
+    .join(', ');
+
+  const text = [
+    '[순대차 등록 요청]',
+    `이름: ${payload.name}`,
+    `메뉴: ${payload.menu}`,
+    `오늘 운영: ${payload.todayHours}`,
+    `위치: ${payload.locationText}`,
+    payload.lat != null && payload.lng != null
+      ? `좌표: ${payload.lat}, ${payload.lng}`
+      : '좌표: (없음)',
+    `사진: ${photos || '(없음)'}`,
+    `요청 ID: ${payload.requestId}`,
+    `시각: ${payload.createdAt}`,
+  ].join('\n');
+
+  const webhook = env.SLACK_WEBHOOK_URL?.trim();
+  if (webhook) {
+    try {
+      const res = await fetch(webhook, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ text }),
+      });
+      if (res.ok) {
+        return { notified: true, channel: 'slack' };
+      }
+      console.error(
+        JSON.stringify({
+          level: 'error',
+          message: 'slack_webhook_failed',
+          event: 'store_registration_notify',
+          status: res.status,
+        })
+      );
+    } catch (err) {
+      console.error(
+        JSON.stringify({
+          level: 'error',
+          message: 'slack_webhook_error',
+          event: 'store_registration_notify',
+          detail: err instanceof Error ? err.message : 'unknown',
+        })
+      );
+    }
+  }
+
+  console.log(
+    JSON.stringify({
+      level: 'info',
+      event: 'store_registration_notify',
+      channel: 'log',
+      ...payload,
+      text,
+    })
+  );
+
+  return { notified: true, channel: 'log' };
+}

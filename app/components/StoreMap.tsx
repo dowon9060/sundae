@@ -1,6 +1,6 @@
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { colors, fonts, layout, spacing, typography } from '../constants/theme';
-import { OsmMap } from './OsmMap';
+import { NaverMap } from './NaverMap';
 
 interface Props {
   address: string;
@@ -15,7 +15,13 @@ export function StoreMap({ address, note, lat, lng, onPress }: Props) {
     <View style={styles.section}>
       <Text style={styles.title}>판매 위치</Text>
       <View style={styles.map}>
-        <OsmMap lat={lat} lng={lng} zoom={15} style={styles.mapView} />
+        <NaverMap
+          lat={lat}
+          lng={lng}
+          zoom={15}
+          label={note || address}
+          style={styles.mapView}
+        />
         <Pressable style={styles.hit} onPress={onPress}>
           <View style={styles.overlay}>
             <Text style={styles.place} numberOfLines={1}>
@@ -49,10 +55,10 @@ const styles = StyleSheet.create({
     backgroundColor: colors.mapPlaceholder,
   },
   mapView: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
   },
   hit: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
     justifyContent: 'flex-end',
   },
   overlay: {

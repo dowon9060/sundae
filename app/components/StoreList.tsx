@@ -9,6 +9,7 @@ import {
 } from 'react-native';
 import { colors, fonts, layout, spacing, typography } from '../constants/theme';
 import type { NearbyStore } from '../types/store';
+import { DayOfWeekTabs } from './DayOfWeekTabs';
 import { StoreCard } from './StoreCard';
 
 interface Props {
@@ -16,8 +17,21 @@ interface Props {
   loading: boolean;
   refreshing: boolean;
   error: string | null;
+  dayOfWeek: number;
+  onChangeDay: (dayOfWeek: number) => void;
   onRefresh: () => void;
   onPressStore: (id: string) => void;
+}
+
+const EMPTY_NO_STORES = '주변에 등록된 판매점이 없습니다.';
+
+function StoreListEmpty({ error }: { error: string | null }) {
+  return (
+    <View style={styles.emptyWrap}>
+      <Text style={styles.emptyMain}>휑~~~</Text>
+      <Text style={styles.emptySecondary}>{error || EMPTY_NO_STORES}</Text>
+    </View>
+  );
 }
 
 export function StoreList({
@@ -25,6 +39,8 @@ export function StoreList({
   loading,
   refreshing,
   error,
+  dayOfWeek,
+  onChangeDay,
   onRefresh,
   onPressStore,
 }: Props) {
@@ -37,6 +53,8 @@ export function StoreList({
           <Ionicons name="swap-vertical" size={14} color={colors.textSecondary} />
         </View>
       </View>
+
+      <DayOfWeekTabs value={dayOfWeek} onChange={onChangeDay} />
 
       {loading && stores.length === 0 ? (
         <ActivityIndicator color={colors.text} style={{ marginTop: 40 }} />
@@ -54,11 +72,7 @@ export function StoreList({
               tintColor={colors.text}
             />
           }
-          ListEmptyComponent={
-            <Text style={styles.empty}>
-              {error || '주변에 표시할 판매점이 없습니다.'}
-            </Text>
-          }
+          ListEmptyComponent={<StoreListEmpty error={error} />}
           contentContainerStyle={styles.listContent}
         />
       )}
@@ -94,10 +108,19 @@ const styles = StyleSheet.create({
     paddingBottom: spacing.xl,
     flexGrow: 1,
   },
-  empty: {
-    ...typography.caption,
-    textAlign: 'center',
+  emptyWrap: {
+    alignItems: 'center',
     marginTop: 48,
     paddingHorizontal: spacing.lg,
+    gap: spacing.sm,
+  },
+  emptyMain: {
+    ...typography.body,
+    color: colors.textMuted,
+    textAlign: 'center',
+  },
+  emptySecondary: {
+    ...typography.caption,
+    textAlign: 'center',
   },
 });

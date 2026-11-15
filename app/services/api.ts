@@ -7,27 +7,20 @@ import type {
   StoreCategory,
   StoreDetail,
 } from '../types/store';
+import { apiFetch } from './apiClient';
 
 const API_BASE =
   process.env.EXPO_PUBLIC_API_URL?.replace(/\/$/, '') ||
   'http://127.0.0.1:8787';
 
-async function request<T>(
-  path: string,
-  init?: RequestInit
-): Promise<T> {
-  let res: Response;
-  try {
-    res = await fetch(`${API_BASE}${path}`, init);
-  } catch {
-    throw new Error('네트워크에 연결할 수 없습니다. 잠시 후 다시 시도해 주세요.');
-  }
+async function request<T>(path: string, init?: RequestInit): Promise<T> {
+  const res = await apiFetch(`${API_BASE}${path}`, init);
 
   if (!res.ok) {
     const body = await res.json().catch(() => ({}));
-    throw new Error(
-      (body as { error?: string }).error || `요청 실패 (${res.status})`
-    );
+    const message =
+      (body as { error?: string }).error || `요청 실패 (${res.status})`;
+    throw new Error(message);
   }
   return res.json() as Promise<T>;
 }
@@ -37,13 +30,18 @@ export async function fetchNearbyStores(params: {
   lng: number;
   category?: StoreCategory;
   radius?: number;
+  /** 0=일 … 6=토 */
+  day?: number;
 }): Promise<NearbyStore[]> {
   const qs = new URLSearchParams({
     lat: String(params.lat),
     lng: String(params.lng),
     category: params.category || 'all',
-    radius: String(params.radius ?? 25000),
+    radius: String(params.radius ?? 5000),
   });
+  if (params.day != null) {
+    qs.set('day', String(params.day));
+  }
   const json = await request<{ data: NearbyStore[] }>(
     `/api/stores/nearby?${qs}`
   );
@@ -120,6 +118,32 @@ export async function submitStoreReport(
         reason: body.reason,
         memo: body.memo ?? null,
       }),
+    }
+  );
+  return { message: json.message };
+}
+
+export interface StoreRegistrationPayload {
+  name: string;
+  menu: string;
+  today_hours: string;
+  location_text: string;
+  lat?: number | null;
+  lng?: number | null;
+  photo_menu?: string | null;
+  photo_location?: string | null;
+  photo_truck?: string | null;
+}
+
+export async function submitStoreRegistration(
+  body: StoreRegistrationPayload
+): Promise<{ message: string }> {
+  const json = await request<{ message: string }>(
+    '/api/stores/registration-requests',
+    {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
     }
   );
   return { message: json.message };

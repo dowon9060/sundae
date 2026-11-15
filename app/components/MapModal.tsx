@@ -2,7 +2,7 @@ import { Modal, Pressable, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { colors, fonts, layout, spacing, typography } from '../constants/theme';
 import { openNaverMapPlace } from '../services/navigation';
-import { OsmMap } from './OsmMap';
+import { NaverMap } from './NaverMap';
 
 interface Props {
   visible: boolean;
@@ -36,7 +36,15 @@ export function MapModal({
         </View>
 
         <View style={styles.mapWrap}>
-          {visible ? <OsmMap lat={lat} lng={lng} zoom={16} /> : null}
+          {visible ? (
+            <NaverMap
+              lat={lat}
+              lng={lng}
+              zoom={16}
+              label={title}
+              navigable
+            />
+          ) : null}
         </View>
 
         <View style={styles.footer}>

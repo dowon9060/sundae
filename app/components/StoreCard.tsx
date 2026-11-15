@@ -1,5 +1,6 @@
 import { Ionicons } from '@expo/vector-icons';
 import { Image, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
+import { foodTruckIcon } from '../constants/images';
 import { colors, fonts, layout, typography } from '../constants/theme';
 import {
   businessStatusLabel,
@@ -21,21 +22,28 @@ export function StoreCard({ store, onPress }: Props) {
         ? colors.accentMuted
         : colors.textMuted;
 
+  const closed = Boolean(store.is_closed_on_day);
+
   return (
-    <Pressable style={styles.card} onPress={onPress}>
+    <Pressable
+      style={[styles.card, closed && styles.cardClosed]}
+      onPress={onPress}
+    >
       <View style={styles.thumbWrap}>
-        {store.photo_url ? (
-          <Image source={{ uri: store.photo_url }} style={styles.thumb} />
-        ) : (
-          <View style={[styles.thumb, styles.thumbPlaceholder]} />
-        )}
+        <Image
+          source={
+            store.photo_url ? { uri: store.photo_url } : foodTruckIcon
+          }
+          style={[styles.thumb, !store.photo_url && styles.thumbPlaceholder]}
+          resizeMode={store.photo_url ? 'cover' : 'contain'}
+        />
       </View>
       <View style={styles.body}>
-        <Text style={styles.name} numberOfLines={1}>
+        <Text style={[styles.name, closed && styles.textMuted]} numberOfLines={1}>
           {store.name}
         </Text>
         {store.menu_summary ? (
-          <Text style={styles.menu} numberOfLines={1}>
+          <Text style={[styles.menu, closed && styles.textMuted]} numberOfLines={1}>
             {store.menu_summary}
           </Text>
         ) : null}
@@ -51,7 +59,9 @@ export function StoreCard({ store, onPress }: Props) {
           </Text>
         </View>
         {store.today_hours_label ? (
-          <Text style={styles.hours}>{store.today_hours_label}</Text>
+          <Text style={[styles.hours, closed && styles.hoursClosed]}>
+            {store.today_hours_label}
+          </Text>
         ) : null}
         <Text style={[styles.status, { color: statusColor }]}>
           {statusLabel}
@@ -97,7 +107,10 @@ const styles = StyleSheet.create({
     width: '100%',
     height: '100%',
   },
-  thumbPlaceholder: {},
+  thumbPlaceholder: {
+    backgroundColor: colors.surfaceElevated,
+    padding: 10,
+  },
   body: {
     flex: 1,
     justifyContent: 'center',
@@ -124,6 +137,15 @@ const styles = StyleSheet.create({
   },
   hours: {
     ...typography.caption,
+  },
+  hoursClosed: {
+    color: colors.textMuted,
+  },
+  cardClosed: {
+    opacity: 0.72,
+  },
+  textMuted: {
+    color: colors.textMuted,
   },
   status: {
     ...typography.status,

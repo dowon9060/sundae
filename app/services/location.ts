@@ -1,8 +1,10 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as ExpoLocation from 'expo-location';
 import type { SavedLocation } from '../types/store';
+import { formatKoreanAddress, localizeAddressText } from './koreanAddress';
 
 const STORAGE_KEY = 'sundaecha.saved_location';
+const GPS_TIMEOUT_MS = 8_000;
 
 /** 권한 거부·GPS 실패 시 기본 위치 (역삼동) */
 export const DEFAULT_LOCATION: SavedLocation = {
@@ -13,11 +15,25 @@ export const DEFAULT_LOCATION: SavedLocation = {
   updatedAt: new Date().toISOString(),
 };
 
+export function sameCoords(
+  a: { lat: number; lng: number } | null | undefined,
+  lat: number,
+  lng: number,
+  epsilon = 0.00005
+): boolean {
+  if (!a) return false;
+  return Math.abs(a.lat - lat) < epsilon && Math.abs(a.lng - lng) < epsilon;
+}
+
 export async function loadSavedLocation(): Promise<SavedLocation | null> {
   const raw = await AsyncStorage.getItem(STORAGE_KEY);
   if (!raw) return null;
   try {
-    return JSON.parse(raw) as SavedLocation;
+    const saved = JSON.parse(raw) as SavedLocation;
+    return {
+      ...saved,
+      address: localizeAddressText(saved.address),
+    };
   } catch {
     return null;
   }
@@ -36,19 +52,42 @@ export async function reverseGeocodeAddress(
       latitude: lat,
       longitude: lng,
     });
-    const addressParts = [
-      place?.city || place?.region,
-      place?.district,
-      place?.street,
-      place?.name,
-    ].filter(Boolean);
-    if (addressParts.length > 0) {
-      return [...new Set(addressParts)].join(' ');
+
+    const korean = formatKoreanAddress({
+      region: place?.region,
+      city: place?.city,
+      district: place?.district,
+      subregion: place?.subregion,
+      street: place?.street,
+      streetNumber: place?.streetNumber,
+      name: place?.name,
+    });
+
+    if (korean) {
+      return localizeAddressText(korean);
     }
   } catch {
-    // fall through
+    // fall through — 좌표 문자열로 대체
   }
   return `${lat.toFixed(5)}, ${lng.toFixed(5)}`;
+}
+
+function withTimeout<T>(promise: Promise<T>, ms: number, label: string): Promise<T> {
+  return new Promise<T>((resolve, reject) => {
+    const timer = setTimeout(() => {
+      reject(new Error(`${label} 시간이 초과되었습니다.`));
+    }, ms);
+    promise.then(
+      (value) => {
+        clearTimeout(timer);
+        resolve(value);
+      },
+      (err) => {
+        clearTimeout(timer);
+        reject(err);
+      }
+    );
+  });
 }
 
 export async function requestGpsLocation(): Promise<SavedLocation | null> {
@@ -57,14 +96,25 @@ export async function requestGpsLocation(): Promise<SavedLocation | null> {
     return null;
   }
 
-  const position = await ExpoLocation.getCurrentPositionAsync({
-    accuracy: ExpoLocation.Accuracy.Balanced,
-  });
-
-  const address = await reverseGeocodeAddress(
-    position.coords.latitude,
-    position.coords.longitude
+  const position = await withTimeout(
+    ExpoLocation.getCurrentPositionAsync({
+      accuracy: ExpoLocation.Accuracy.Balanced,
+    }),
+    GPS_TIMEOUT_MS,
+    '위치 확인'
   );
+
+  const address = await withTimeout(
+    reverseGeocodeAddress(
+      position.coords.latitude,
+      position.coords.longitude
+    ),
+    GPS_TIMEOUT_MS,
+    '주소 변환'
+  ).catch(() => {
+    const { latitude, longitude } = position.coords;
+    return `${latitude.toFixed(5)}, ${longitude.toFixed(5)}`;
+  });
 
   const saved: SavedLocation = {
     lat: position.coords.latitude,
