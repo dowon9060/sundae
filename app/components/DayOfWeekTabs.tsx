@@ -1,5 +1,5 @@
 import { Pressable, StyleSheet, Text, View } from 'react-native';
-import { colors, fonts, layout, spacing } from '../constants/theme';
+import { colors, layout, spacing, typography } from '../constants/theme';
 
 /** 표시 순서: 월…일. value는 DB/JS 기준 0=일 … 6=토 */
 const DAYS: { value: number; label: string }[] = [
@@ -29,7 +29,11 @@ export function DayOfWeekTabs({ value, onChange }: Props) {
             onPress={() => onChange(day.value)}
             hitSlop={4}
           >
-            <Text style={[styles.label, active && styles.labelActive]}>
+            <Text
+              style={[styles.label, active && styles.labelActive]}
+              allowFontScaling
+              maxFontSizeMultiplier={1.35}
+            >
               {day.label}
             </Text>
           </Pressable>
@@ -68,8 +72,10 @@ const styles = StyleSheet.create({
   },
   chip: {
     flex: 1,
-    height: 36,
-    borderRadius: 18,
+    minHeight: layout.dayChipHeight,
+    minWidth: 36,
+    paddingVertical: 8,
+    borderRadius: 20,
     backgroundColor: colors.chip,
     borderWidth: 1,
     borderColor: colors.chipBorder,
@@ -81,12 +87,10 @@ const styles = StyleSheet.create({
     borderColor: colors.chipBorderActive,
   },
   label: {
-    fontFamily: fonts.medium,
-    color: colors.textSecondary,
-    fontSize: 13,
+    ...typography.dayChip,
+    textAlign: 'center',
   },
   labelActive: {
-    color: colors.text,
-    fontFamily: fonts.bold,
+    ...typography.dayChipBold,
   },
 });

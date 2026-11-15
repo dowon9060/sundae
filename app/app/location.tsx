@@ -142,7 +142,7 @@ export default function LocationScreen() {
         keyExtractor={(item) => item.id}
         keyboardShouldPersistTaps="handled"
         ListEmptyComponent={
-          canSearch && !searching ? (
+          canSearch && !searching && !error ? (
             <Text style={styles.empty}>검색 결과가 없습니다.</Text>
           ) : (
             <View />

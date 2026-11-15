@@ -141,6 +141,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.surfaceElevated,
   },
   thumbPlaceholder: {
+    backgroundColor: '#FFF3E8',
     padding: 8,
   },
   body: {

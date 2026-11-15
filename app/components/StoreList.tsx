@@ -7,7 +7,7 @@ import {
   Text,
   View,
 } from 'react-native';
-import { colors, fonts, layout, spacing, typography } from '../constants/theme';
+import { colors, layout, spacing, typography } from '../constants/theme';
 import type { NearbyStore } from '../types/store';
 import { DayOfWeekTabs } from './DayOfWeekTabs';
 import { StoreCard } from './StoreCard';
@@ -98,17 +98,17 @@ const styles = StyleSheet.create({
     paddingBottom: spacing.sm,
   },
   title: {
-    fontFamily: fonts.bold,
-    color: colors.text,
-    fontSize: 16,
+    ...typography.subtitle,
   },
   sortRow: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 2,
+    paddingVertical: 2,
   },
   sort: {
     ...typography.caption,
+    lineHeight: 20,
   },
   listContent: {
     paddingBottom: spacing.xl,

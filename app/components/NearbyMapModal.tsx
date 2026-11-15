@@ -1,11 +1,18 @@
 import { useRouter } from 'expo-router';
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Modal, Pressable, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { colors, fonts, layout, spacing, typography } from '../constants/theme';
+import {
+  androidFont,
+  colors,
+  fonts,
+  layout,
+  spacing,
+  typography,
+} from '../constants/theme';
 import type { NearbyStore } from '../types/store';
 import { MapStoreSheet } from './MapStoreSheet';
-import { NaverMap } from './NaverMap';
+import { NaverMap, type MapMarker } from './NaverMap';
 
 interface Props {
   visible: boolean;
@@ -31,11 +38,24 @@ export function NearbyMapModal({
     if (!visible) setSelected(null);
   }, [visible]);
 
-  const markers = stores.map((s) => ({
-    lat: s.lat,
-    lng: s.lng,
-    label: s.name,
-  }));
+  /** 0번=현위치, 이후=판매점 — 클릭 시 index-1 로 매핑 */
+  const markers = useMemo<MapMarker[]>(() => {
+    const storePins: MapMarker[] = stores.map((s) => ({
+      lat: s.lat,
+      lng: s.lng,
+      label: s.name,
+      kind: 'store' as const,
+    }));
+    return [
+      {
+        lat: centerLat,
+        lng: centerLng,
+        label: '현위치',
+        kind: 'user' as const,
+      },
+      ...storePins,
+    ];
+  }, [stores, centerLat, centerLng]);
 
   return (
     <Modal visible={visible} animationType="slide" presentationStyle="fullScreen">
@@ -49,27 +69,24 @@ export function NearbyMapModal({
 
         <Text style={styles.hint}>
           {stores.length > 0
-            ? `주변 ${stores.length}곳 · 핀을 누르면 정보가 열립니다. +/− 로 확대·축소할 수 있습니다.`
-            : '주변에 표시할 판매점이 없습니다.'}
+            ? `현위치 기준 · 주변 ${stores.length}곳 · 핀을 누르면 정보가 열립니다.`
+            : '현위치를 중심으로 표시합니다. 주변에 판매점이 없습니다.'}
         </Text>
 
         <View style={styles.mapWrap}>
           {visible ? (
             <NaverMap
-              key={`map-${markers.length}-${centerLat.toFixed(4)}-${centerLng.toFixed(4)}`}
+              key={`map-${centerLat.toFixed(5)}-${centerLng.toFixed(5)}-${stores.length}`}
               lat={centerLat}
               lng={centerLng}
-              zoom={14}
+              zoom={15}
               navigable
-              markers={
-                markers.length > 0
-                  ? markers
-                  : [{ lat: centerLat, lng: centerLng, label: '내 위치' }]
-              }
+              lockCenter
+              markers={markers}
               onPressMarker={(index) => {
-                // '내 위치' 단독 마커일 때는 매장 없음
-                if (stores.length === 0) return;
-                const store = stores[index];
+                // 0 = 현위치 마커
+                if (index <= 0) return;
+                const store = stores[index - 1];
                 if (!store) return;
                 setSelected(store);
               }}
@@ -107,11 +124,15 @@ const styles = StyleSheet.create({
     fontFamily: fonts.bold,
     color: colors.text,
     fontSize: 18,
+    lineHeight: 27,
+    ...androidFont,
   },
   close: {
     fontFamily: fonts.medium,
     color: colors.accent,
     fontSize: 16,
+    lineHeight: 24,
+    ...androidFont,
   },
   hint: {
     ...typography.caption,

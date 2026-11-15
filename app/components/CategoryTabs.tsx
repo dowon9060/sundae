@@ -1,5 +1,5 @@
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
-import { colors, fonts, layout, spacing } from '../constants/theme';
+import { colors, layout, spacing, typography } from '../constants/theme';
 import type { StoreCategory } from '../types/store';
 
 const TABS: { key: StoreCategory; label: string }[] = [
@@ -31,13 +31,23 @@ export function CategoryTabs({ value, onChange, onPressTakoyakiMap }: Props) {
                 style={[styles.chip, active && styles.chipActive]}
                 onPress={() => onChange(value === tab.key ? 'all' : tab.key)}
               >
-                <Text style={[styles.label, active && styles.labelActive]}>
+                <Text
+                  style={[styles.label, active && styles.labelActive]}
+                  allowFontScaling
+                  maxFontSizeMultiplier={1.35}
+                >
                   {tab.label}
                 </Text>
               </Pressable>
               {tab.key === 'other' && onPressTakoyakiMap ? (
                 <Pressable style={styles.mapChip} onPress={onPressTakoyakiMap}>
-                  <Text style={styles.mapChipLabel}>지도로 보기</Text>
+                  <Text
+                    style={styles.mapChipLabel}
+                    allowFontScaling
+                    maxFontSizeMultiplier={1.35}
+                  >
+                    지도로 보기
+                  </Text>
                 </Pressable>
               ) : null}
             </View>
@@ -68,8 +78,9 @@ const styles = StyleSheet.create({
     gap: 6,
   },
   chip: {
-    height: layout.chipHeight,
+    minHeight: layout.chipHeight,
     paddingHorizontal: 18,
+    paddingVertical: 10,
     borderRadius: layout.chipRadius,
     backgroundColor: colors.chip,
     borderWidth: 1,
@@ -82,25 +93,24 @@ const styles = StyleSheet.create({
     borderColor: colors.chipBorderActive,
   },
   label: {
-    fontFamily: fonts.medium,
-    color: colors.textSecondary,
-    fontSize: 14,
+    ...typography.chip,
   },
   labelActive: {
-    color: colors.text,
-    fontFamily: fonts.bold,
+    ...typography.chipBold,
   },
   mapChip: {
-    height: layout.chipHeight,
+    minHeight: layout.chipHeight,
     paddingHorizontal: 14,
+    paddingVertical: 10,
     borderRadius: layout.chipRadius,
     backgroundColor: colors.text,
     justifyContent: 'center',
     alignItems: 'center',
   },
   mapChipLabel: {
-    fontFamily: fonts.bold,
-    color: '#FFFFFF',
+    ...typography.chipBold,
     fontSize: 13,
+    lineHeight: 20,
+    color: '#FFFFFF',
   },
 });

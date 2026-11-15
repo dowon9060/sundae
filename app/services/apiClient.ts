@@ -86,7 +86,7 @@ export async function apiFetch(
         );
       }
       throw new Error(
-        '네트워크에 연결할 수 없습니다. 잠시 후 다시 시도해 주세요.'
+        '판매 정보를 불러오지 못했습니다. 아래로 당겨 다시 시도해 주세요.'
       );
     } finally {
       clearTimeout(timer);

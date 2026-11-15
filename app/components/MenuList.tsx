@@ -1,16 +1,24 @@
-import { StyleSheet, Text, View } from 'react-native';
-import { colors, fonts, layout, spacing } from '../constants/theme';
+import { Image, Pressable, StyleSheet, Text, View } from 'react-native';
+import { foodTruckIcon } from '../constants/images';
+import {
+  androidFont,
+  colors,
+  fonts,
+  layout,
+  spacing,
+} from '../constants/theme';
 import type { MenuItem } from '../types/store';
 
 interface Props {
   menus: MenuItem[];
+  onPressPhoto?: (url: string | null) => void;
 }
 
 function formatPrice(price: number): string {
   return `${price.toLocaleString('ko-KR')}원`;
 }
 
-export function MenuList({ menus }: Props) {
+export function MenuList({ menus, onPressPhoto }: Props) {
   return (
     <View style={styles.section}>
       <Text style={styles.title}>판매 메뉴</Text>
@@ -19,13 +27,31 @@ export function MenuList({ menus }: Props) {
       ) : (
         menus.map((menu) => (
           <View key={menu.id} style={styles.row}>
-            <Text
-              style={[styles.name, !menu.is_available && styles.unavailable]}
+            <Pressable
+              onPress={() => onPressPhoto?.(menu.photo_url)}
+              disabled={!onPressPhoto}
             >
-              {menu.name}
-              {!menu.is_available ? ' (판매 중지)' : ''}
-            </Text>
-            <Text style={styles.price}>{formatPrice(menu.price)}</Text>
+              <Image
+                source={
+                  menu.photo_url ? { uri: menu.photo_url } : foodTruckIcon
+                }
+                style={[
+                  styles.thumb,
+                  !menu.photo_url && styles.thumbPlaceholder,
+                ]}
+                resizeMode={menu.photo_url ? 'cover' : 'contain'}
+              />
+            </Pressable>
+            <View style={styles.body}>
+              <Text
+                style={[styles.name, !menu.is_available && styles.unavailable]}
+                numberOfLines={2}
+              >
+                {menu.name}
+                {!menu.is_available ? ' (판매 중지)' : ''}
+              </Text>
+              <Text style={styles.price}>{formatPrice(menu.price)}</Text>
+            </View>
           </View>
         ))
       )}
@@ -42,19 +68,39 @@ const styles = StyleSheet.create({
     fontFamily: fonts.bold,
     color: colors.text,
     fontSize: 16,
+    lineHeight: 24,
     marginBottom: spacing.sm,
+    ...androidFont,
   },
   row: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
+    alignItems: 'center',
+    gap: 12,
     paddingVertical: 10,
     borderBottomWidth: StyleSheet.hairlineWidth,
     borderBottomColor: colors.border,
+  },
+  thumb: {
+    width: 64,
+    height: 64,
+    borderRadius: 12,
+    backgroundColor: colors.surfaceElevated,
+  },
+  thumbPlaceholder: {
+    backgroundColor: '#FFF3E8',
+    padding: 8,
+  },
+  body: {
+    flex: 1,
+    gap: 4,
+    minWidth: 0,
   },
   name: {
     fontFamily: fonts.regular,
     color: colors.text,
     fontSize: 15,
+    lineHeight: 22,
+    ...androidFont,
   },
   unavailable: {
     color: colors.textMuted,
@@ -63,9 +109,13 @@ const styles = StyleSheet.create({
     fontFamily: fonts.medium,
     color: colors.text,
     fontSize: 15,
+    lineHeight: 22,
+    ...androidFont,
   },
   empty: {
     fontFamily: fonts.regular,
     color: colors.textSecondary,
+    lineHeight: 20,
+    ...androidFont,
   },
 });

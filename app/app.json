@@ -18,7 +18,7 @@
     },
     "android": {
       "package": "com.sundaecha.app",
-      "versionCode": 1,
+      "versionCode": 5,
       "adaptiveIcon": {
         "backgroundColor": "#F7F7F8",
         "foregroundImage": "./assets/images/android-icon-foreground.png",
@@ -32,6 +32,7 @@
         "READ_MEDIA_IMAGES",
         "READ_EXTERNAL_STORAGE"
       ],
+      "usesCleartextTraffic": true,
       "predictiveBackGestureEnabled": false
     },
     "web": {
@@ -47,7 +48,7 @@
           "image": "./assets/images/foodtruck-icon.png",
           "imageWidth": 200,
           "resizeMode": "contain",
-          "backgroundColor": "#FFFFFF"
+          "backgroundColor": "#FFF8F3"
         }
       ],
       [

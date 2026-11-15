@@ -1,3 +1,5 @@
+import { Platform, type TextStyle } from 'react-native';
+
 /** 화이트 배경 + 목업 구조에 맞춘 라이트 팔레트 */
 export const colors = {
   background: '#FFFFFF',
@@ -37,7 +39,9 @@ export const layout = {
   thumbSize: 152,
   thumbRadius: 14,
   chipRadius: 22,
-  chipHeight: 40,
+  /** Noto Sans KR + Android 여유 (폴드 배율 포함) */
+  chipHeight: 44,
+  dayChipHeight: 40,
 };
 
 export const fonts = {
@@ -46,44 +50,50 @@ export const fonts = {
   bold: 'NotoSansKR_700Bold',
 };
 
+/**
+ * Android(폴드 포함)에서 Noto Sans KR 세로 잘림 방지.
+ * includeFontPadding 제거 + lineHeight 명시.
+ */
+export const androidFont: TextStyle = Platform.select({
+  android: {
+    includeFontPadding: false,
+    textAlignVertical: 'center' as const,
+  },
+  default: {},
+})!;
+
+export function fontLine(size: number): number {
+  return Math.round(size * 1.5);
+}
+
+function typeStyle(
+  family: string,
+  size: number,
+  color: string,
+  extra?: TextStyle
+): TextStyle {
+  return {
+    fontFamily: family,
+    fontSize: size,
+    lineHeight: fontLine(size),
+    color,
+    ...androidFont,
+    ...extra,
+  };
+}
+
 export const typography = {
-  hero: {
-    fontFamily: fonts.bold,
-    fontSize: 24,
-    color: colors.text,
-  },
-  title: {
-    fontFamily: fonts.bold,
-    fontSize: 18,
-    color: colors.text,
-  },
-  subtitle: {
-    fontFamily: fonts.bold,
-    fontSize: 16,
-    color: colors.text,
-  },
-  body: {
-    fontFamily: fonts.regular,
-    fontSize: 15,
-    color: colors.text,
-  },
-  bodyMedium: {
-    fontFamily: fonts.medium,
-    fontSize: 15,
-    color: colors.text,
-  },
-  caption: {
-    fontFamily: fonts.regular,
-    fontSize: 13,
-    color: colors.textSecondary,
-  },
-  label: {
-    fontFamily: fonts.regular,
-    fontSize: 12,
-    color: colors.textSecondary,
-  },
-  status: {
-    fontFamily: fonts.medium,
-    fontSize: 13,
-  },
+  hero: typeStyle(fonts.bold, 24, colors.text),
+  title: typeStyle(fonts.bold, 18, colors.text),
+  subtitle: typeStyle(fonts.bold, 16, colors.text),
+  body: typeStyle(fonts.regular, 15, colors.text),
+  bodyMedium: typeStyle(fonts.medium, 15, colors.text),
+  caption: typeStyle(fonts.regular, 13, colors.textSecondary),
+  label: typeStyle(fonts.regular, 12, colors.textSecondary),
+  status: typeStyle(fonts.medium, 13, colors.text),
+  chip: typeStyle(fonts.medium, 14, colors.textSecondary),
+  chipBold: typeStyle(fonts.bold, 14, colors.text),
+  dayChip: typeStyle(fonts.medium, 13, colors.textSecondary),
+  dayChipBold: typeStyle(fonts.bold, 13, colors.text),
+  micro: typeStyle(fonts.medium, 11, colors.text),
 };

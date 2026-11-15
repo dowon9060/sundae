@@ -5,13 +5,15 @@ compatibility_date = "2026-05-03"
 [[d1_databases]]
 binding = "DB"
 database_name = "sundaecha"
-database_id = "local-sundaecha-db"
+database_id = "60f198aa-21b0-4541-ac1b-f86cb8d47745"
 migrations_dir = "migrations"
 
 [vars]
 LOCATION_STALE_DAYS = "14"
 # local | production — production에서는 /dev/* 비활성
-ENVIRONMENT = "local"
+ENVIRONMENT = "production"
+
+workers_dev = true
 # ADMIN_KEY 는 저장소에 넣지 마세요.
 # 로컬: backend-cf/.dev.vars (참고: .dev.vars.example)
 # 배포: npx wrangler secret put ADMIN_KEY

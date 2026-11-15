@@ -1,6 +1,14 @@
 import { Ionicons } from '@expo/vector-icons';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
-import { colors, fonts, layout, spacing, typography } from '../constants/theme';
+import {
+  androidFont,
+  colors,
+  fontLine,
+  fonts,
+  layout,
+  spacing,
+  typography,
+} from '../constants/theme';
 import { localizeAddressText } from '../services/koreanAddress';
 
 interface Props {
@@ -19,10 +27,21 @@ export function LocationHeader({
   return (
     <View style={styles.container}>
       <Pressable style={styles.left} onPress={onPressAddress}>
-        <Text style={styles.label}>현재 설정된 위치</Text>
+        <Text
+          style={styles.label}
+          allowFontScaling
+          maxFontSizeMultiplier={1.35}
+        >
+          현재 설정된 위치
+        </Text>
         <View style={styles.addressRow}>
           <Ionicons name="location-sharp" size={16} color={colors.text} />
-          <Text style={styles.address} numberOfLines={1}>
+          <Text
+            style={styles.address}
+            numberOfLines={1}
+            allowFontScaling
+            maxFontSizeMultiplier={1.35}
+          >
             {displayAddress}
           </Text>
           <Ionicons
@@ -39,7 +58,13 @@ export function LocationHeader({
         accessibilityLabel="현위치"
       >
         <Ionicons name="locate-outline" size={18} color={colors.text} />
-        <Text style={styles.gpsLabel}>현위치</Text>
+        <Text
+          style={styles.gpsLabel}
+          allowFontScaling
+          maxFontSizeMultiplier={1.2}
+        >
+          현위치
+        </Text>
       </Pressable>
     </View>
   );
@@ -57,6 +82,7 @@ const styles = StyleSheet.create({
   left: {
     flex: 1,
     marginRight: spacing.md,
+    minWidth: 0,
   },
   label: {
     ...typography.label,
@@ -66,25 +92,28 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
+    minWidth: 0,
   },
   address: {
     fontFamily: fonts.bold,
     fontSize: 18,
+    lineHeight: fontLine(18),
     color: colors.text,
     flexShrink: 1,
+    minWidth: 0,
+    ...androidFont,
   },
   gpsButton: {
-    minWidth: 52,
-    height: 44,
+    minWidth: 56,
+    minHeight: 48,
     borderRadius: 12,
     alignItems: 'center',
     justifyContent: 'center',
     gap: 2,
     paddingHorizontal: 6,
+    paddingVertical: 4,
   },
   gpsLabel: {
-    fontFamily: fonts.medium,
-    fontSize: 11,
-    color: colors.text,
+    ...typography.micro,
   },
 });

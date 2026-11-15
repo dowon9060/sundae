@@ -1,5 +1,5 @@
 import { useLocalSearchParams } from 'expo-router';
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
   Image,
@@ -12,7 +12,9 @@ import {
 import { BusinessHours } from '../../components/BusinessHours';
 import { MapModal } from '../../components/MapModal';
 import { MenuList } from '../../components/MenuList';
+import { MenuPhotoGallery } from '../../components/MenuPhotoGallery';
 import { NavigationSheet } from '../../components/NavigationSheet';
+import { PhotoLightbox } from '../../components/PhotoLightbox';
 import { ReportSheet } from '../../components/ReportSheet';
 import { StoreMap } from '../../components/StoreMap';
 import { foodTruckIcon } from '../../constants/images';
@@ -43,6 +45,8 @@ export default function StoreDetailScreen() {
   const [mapOpen, setMapOpen] = useState(false);
   const [navOpen, setNavOpen] = useState(false);
   const [reportOpen, setReportOpen] = useState(false);
+  const [lightboxOpen, setLightboxOpen] = useState(false);
+  const [lightboxIndex, setLightboxIndex] = useState(0);
 
   useEffect(() => {
     if (!id) return;
@@ -99,14 +103,42 @@ export default function StoreDetailScreen() {
     lng: store.lng,
   };
 
+  /** 등록된 사진 전체 (대표 + 메뉴) — 라이트박스 스와이프용 */
+  const allPhotos = useMemo(() => {
+    const list: string[] = [];
+    const seen = new Set<string>();
+    const push = (url: string | null | undefined) => {
+      if (!url || seen.has(url)) return;
+      seen.add(url);
+      list.push(url);
+    };
+    push(store.photo_url);
+    for (const m of menus) push(m.photo_url);
+    return list;
+  }, [store.photo_url, menus]);
+
+  const previewUrls = [
+    ...menus.map((m) => m.photo_url),
+    store.photo_url,
+  ];
+
+  const openLightbox = (url: string | null | undefined) => {
+    if (allPhotos.length === 0) return;
+    const idx = url ? allPhotos.indexOf(url) : 0;
+    setLightboxIndex(idx >= 0 ? idx : 0);
+    setLightboxOpen(true);
+  };
+
   return (
     <View style={styles.container}>
       <ScrollView contentContainerStyle={styles.scroll}>
-        <Image
-          source={store.photo_url ? { uri: store.photo_url } : foodTruckIcon}
-          style={[styles.hero, !store.photo_url && styles.heroPlaceholder]}
-          resizeMode={store.photo_url ? 'cover' : 'contain'}
-        />
+        <Pressable onPress={() => openLightbox(store.photo_url)}>
+          <Image
+            source={store.photo_url ? { uri: store.photo_url } : foodTruckIcon}
+            style={[styles.hero, !store.photo_url && styles.heroPlaceholder]}
+            resizeMode={store.photo_url ? 'cover' : 'contain'}
+          />
+        </Pressable>
 
         <View style={styles.info}>
           <Text style={styles.name}>{store.name}</Text>
@@ -127,8 +159,12 @@ export default function StoreDetailScreen() {
           ) : null}
         </View>
 
+        <MenuPhotoGallery
+          urls={previewUrls}
+          onPressPhoto={(_i, url) => openLightbox(url)}
+        />
         <BusinessHours hours={hours} />
-        <MenuList menus={menus} />
+        <MenuList menus={menus} onPressPhoto={(url) => openLightbox(url)} />
         <StoreMap
           address={store.address}
           note={store.location_note}
@@ -175,6 +211,12 @@ export default function StoreDetailScreen() {
         storeName={store.name}
         onClose={() => setReportOpen(false)}
       />
+      <PhotoLightbox
+        visible={lightboxOpen}
+        urls={allPhotos}
+        initialIndex={lightboxIndex}
+        onClose={() => setLightboxOpen(false)}
+      />
     </View>
   );
 }
@@ -200,6 +242,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.surfaceElevated,
   },
   heroPlaceholder: {
+    backgroundColor: '#FFF3E8',
     paddingVertical: 24,
   },
   info: {

@@ -7,12 +7,16 @@ import type {
   StoreCategory,
   StoreDetail,
 } from '../types/store';
+import { searchLocalLocations } from '../constants/locationCandidates';
 import { apiFetch } from './apiClient';
 import { getClientId } from './clientId';
 
+/** 실기기·릴리스 APK 기본값. 로컬은 .env 의 EXPO_PUBLIC_API_URL 사용 */
+const PRODUCTION_API = 'https://sundaecha-api.jiras90.workers.dev';
+
 const API_BASE =
   process.env.EXPO_PUBLIC_API_URL?.replace(/\/$/, '') ||
-  'http://127.0.0.1:8787';
+  (__DEV__ ? 'http://127.0.0.1:8787' : PRODUCTION_API);
 
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
   const res = await apiFetch(`${API_BASE}${path}`, init);
@@ -125,10 +129,15 @@ export async function searchLocations(
   q: string
 ): Promise<LocationSearchResult[]> {
   if (!q.trim()) return [];
-  const json = await request<{ data: LocationSearchResult[] }>(
-    `/api/locations/search?q=${encodeURIComponent(q.trim())}`
-  );
-  return json.data;
+  try {
+    const json = await request<{ data: LocationSearchResult[] }>(
+      `/api/locations/search?q=${encodeURIComponent(q.trim())}`
+    );
+    return json.data;
+  } catch {
+    // API 불가 시에도 역/동네 검색은 로컬 후보로 동작
+    return searchLocalLocations(q);
+  }
 }
 
 export async function submitStoreReport(

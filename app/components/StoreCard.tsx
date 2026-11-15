@@ -10,7 +10,14 @@ import {
   View,
 } from 'react-native';
 import { foodTruckIcon } from '../constants/images';
-import { colors, fonts, layout, typography } from '../constants/theme';
+import {
+  androidFont,
+  colors,
+  fontLine,
+  fonts,
+  layout,
+  typography,
+} from '../constants/theme';
 import { toggleStoreLike } from '../services/api';
 import {
   businessStatusLabel,
@@ -191,8 +198,8 @@ const styles = StyleSheet.create({
     height: '100%',
   },
   thumbPlaceholder: {
-    backgroundColor: colors.surfaceElevated,
-    padding: 10,
+    backgroundColor: '#FFF3E8',
+    padding: 8,
   },
   body: {
     flex: 1,
@@ -211,6 +218,8 @@ const styles = StyleSheet.create({
     fontFamily: fonts.bold,
     color: colors.text,
     fontSize: 16,
+    lineHeight: fontLine(16),
+    ...androidFont,
   },
   likeBtn: {
     flexDirection: 'row',
@@ -223,8 +232,10 @@ const styles = StyleSheet.create({
   likeCount: {
     fontFamily: fonts.medium,
     fontSize: 13,
+    lineHeight: fontLine(13),
     color: colors.textSecondary,
     minWidth: 12,
+    ...androidFont,
   },
   likeCountActive: {
     color: colors.danger,
@@ -232,7 +243,9 @@ const styles = StyleSheet.create({
   likeError: {
     fontFamily: fonts.regular,
     fontSize: 11,
+    lineHeight: fontLine(11),
     color: colors.danger,
+    ...androidFont,
   },
   menu: {
     ...typography.caption,

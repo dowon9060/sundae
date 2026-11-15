@@ -14,6 +14,8 @@ export interface MapMarker {
   lat: number;
   lng: number;
   label?: string;
+  /** user=현위치, store=판매점(기본) */
+  kind?: 'user' | 'store';
 }
 
 interface Props {
@@ -24,6 +26,11 @@ interface Props {
   interactive?: boolean;
   /** 확대·축소·이동 허용 (지도로 보기 등) */
   navigable?: boolean;
+  /**
+   * true면 마커 bounds로 맞추지 않고 lat/lng 중심·zoom 유지
+   * (지도로 보기: 현위치 중심)
+   */
+  lockCenter?: boolean;
   /** 단일 마커 라벨 (markers 미사용 시) */
   label?: string;
   /** 여러 핀. 있으면 이 목록으로 표시 */
@@ -34,7 +41,8 @@ interface Props {
 }
 
 const NCP_KEY_ID = process.env.EXPO_PUBLIC_NCP_KEY_ID?.trim() ?? '';
-const MAP_BASE_URL = 'http://localhost';
+/** NCP Web 서비스 URL에 https://localhost 와 http://localhost 모두 등록 */
+const MAP_BASE_URL = 'https://localhost';
 
 function buildHtml(
   keyId: string,
@@ -43,6 +51,7 @@ function buildHtml(
   zoom: number,
   interactive: boolean,
   navigable: boolean,
+  lockCenter: boolean,
   label: string,
   markers: MapMarker[],
   markerIconUri: string
@@ -50,7 +59,7 @@ function buildHtml(
   const markerPayload = JSON.stringify(
     markers.length > 0
       ? markers
-      : [{ lat, lng, label: label || '' }]
+      : [{ lat, lng, label: label || '', kind: 'store' }]
   );
 
   return `<!DOCTYPE html>
@@ -95,6 +104,7 @@ function buildHtml(
     var lng = ${lng};
     var interactive = ${interactive ? 'true' : 'false'};
     var navigable = ${navigable ? 'true' : 'false'};
+    var lockCenter = ${lockCenter ? 'true' : 'false'};
     var points = ${markerPayload};
     var truckIconUri = ${JSON.stringify(markerIconUri)};
     var map = null;
@@ -113,6 +123,26 @@ function buildHtml(
         .replace(/</g, '&lt;')
         .replace(/>/g, '&gt;')
         .replace(/"/g, '&quot;');
+    }
+
+    /** 현위치(파란 점) 마커 */
+    function userPinIcon(text) {
+      var label = text
+        ? '<div style="margin-top:4px;padding:3px 8px;border-radius:8px;background:#111;color:#fff;font:700 11px/1.2 sans-serif;white-space:nowrap;box-shadow:0 2px 8px rgba(0,0,0,.2);">' +
+          escapeHtml(text) +
+          '</div>'
+        : '';
+      var html =
+        '<div style="width:64px;text-align:center;">' +
+        '<div style="width:22px;height:22px;margin:0 auto;border-radius:11px;background:#2B6CFF;' +
+        'border:3px solid #fff;box-shadow:0 0 0 6px rgba(43,108,255,.28),0 2px 8px rgba(0,0,0,.25);"></div>' +
+        label +
+        '</div>';
+      return {
+        content: html,
+        size: new naver.maps.Size(64, text ? 48 : 28),
+        anchor: new naver.maps.Point(32, 14)
+      };
     }
 
     /** 푸드트럭 아이콘 마커 — size 필수 */
@@ -166,38 +196,45 @@ function buildHtml(
         points.forEach(function (p, index) {
           var pos = new naver.maps.LatLng(Number(p.lat), Number(p.lng));
           bounds.extend(pos);
+          var isUser = p.kind === 'user';
+          var icon = isUser ? userPinIcon(p.label || '현위치') : pinIcon(p.label || '');
           var m;
           try {
             m = new naver.maps.Marker({
               position: pos,
               map: map,
-              draggable: interactive && points.length === 1,
-              icon: pinIcon(p.label || ''),
-              zIndex: 100 + index,
-              clickable: true
+              draggable: interactive && points.length === 1 && !isUser,
+              icon: icon,
+              zIndex: isUser ? 1000 : 100 + index,
+              clickable: !isUser
             });
           } catch (err) {
-            // HTML 아이콘 실패 시 기본 마커
             m = new naver.maps.Marker({
               position: pos,
               map: map,
-              draggable: interactive && points.length === 1,
+              draggable: interactive && points.length === 1 && !isUser,
               title: p.label || '',
-              clickable: true
+              clickable: !isUser
             });
           }
-          (function (i) {
-            naver.maps.Event.addListener(m, 'click', function () {
-              post({ type: 'marker', index: i });
-            });
-          })(index);
+          if (!isUser) {
+            (function (i) {
+              naver.maps.Event.addListener(m, 'click', function () {
+                post({ type: 'marker', index: i });
+              });
+            })(index);
+          }
           markers.push(m);
           if (index === 0) marker = m;
         });
 
         post({ type: 'markers', count: markers.length });
 
-        if (points.length > 1) {
+        // 현위치 중심 고정(지도로 보기) 또는 단일/다중 마커 맞춤
+        if (lockCenter) {
+          map.setCenter(new naver.maps.LatLng(lat, lng));
+          map.setZoom(${zoom}, false);
+        } else if (points.length > 1) {
           map.fitBounds(bounds, { top: 64, right: 64, bottom: 64, left: 64 });
         } else if (points.length === 1) {
           map.setCenter(new naver.maps.LatLng(Number(points[0].lat), Number(points[0].lng)));
@@ -266,6 +303,7 @@ export function NaverMap({
   zoom = 16,
   interactive = false,
   navigable,
+  lockCenter = false,
   label = '',
   markers,
   style,
@@ -288,13 +326,14 @@ export function NaverMap({
             zoom,
             interactive,
             canNavigate,
+            lockCenter,
             label,
             markers ?? [],
             FOOD_TRUCK_MARKER_DATA_URI
           )
         : '',
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [interactive, canNavigate, zoom, label, markerKey, lat, lng]
+    [interactive, canNavigate, lockCenter, zoom, label, markerKey, lat, lng]
   );
 
   useEffect(() => {
@@ -348,8 +387,9 @@ export function NaverMap({
       <View style={[styles.wrap, styles.fallback, style]}>
         <Text style={styles.fallbackTitle}>네이버 지도 인증에 실패했습니다</Text>
         <Text style={styles.fallbackBody}>
-          NCP 콘솔에서 Dynamic Map과 Web 서비스 URL(http://localhost)을 확인해
-          주세요. 다른 지도는 표시하지 않습니다.
+          NCP 콘솔에서 Maps Application의 Dynamic Map을 켜고, Web 서비스 URL에
+          https://localhost 와 http://localhost 를 등록한 뒤 앱을 다시 설치해
+          주세요.
         </Text>
       </View>
     );
@@ -365,11 +405,13 @@ export function NaverMap({
         onMessage={onMessage}
         javaScriptEnabled
         domStorageEnabled
+        allowFileAccess
+        allowUniversalAccessFromFileURLs
+        mixedContentMode="always"
         scrollEnabled={false}
         nestedScrollEnabled
         setSupportMultipleWindows={false}
         androidLayerType="hardware"
-        mixedContentMode="always"
         overScrollMode="never"
         bounces={false}
       />
