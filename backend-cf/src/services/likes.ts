@@ -16,19 +16,27 @@ export async function getLikedStoreIds(
 
   // D1 바인드 한도 고려하여 청크 조회
   const chunkSize = 40;
-  for (let i = 0; i < storeIds.length; i += chunkSize) {
-    const chunk = storeIds.slice(i, i + chunkSize);
-    const placeholders = chunk.map(() => '?').join(',');
-    const rows = await env.DB.prepare(
-      `SELECT store_id FROM store_likes
-       WHERE client_id = ? AND store_id IN (${placeholders})`
-    )
-      .bind(clientId, ...chunk)
-      .all<{ store_id: string }>();
+  try {
+    for (let i = 0; i < storeIds.length; i += chunkSize) {
+      const chunk = storeIds.slice(i, i + chunkSize);
+      const placeholders = chunk.map(() => '?').join(',');
+      const rows = await env.DB.prepare(
+        `SELECT store_id FROM store_likes
+         WHERE client_id = ? AND store_id IN (${placeholders})`
+      )
+        .bind(clientId, ...chunk)
+        .all<{ store_id: string }>();
 
-    for (const row of rows.results ?? []) {
-      liked.add(row.store_id);
+      for (const row of rows.results ?? []) {
+        liked.add(row.store_id);
+      }
     }
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err);
+    if (msg.includes('no such table')) {
+      return liked;
+    }
+    throw err;
   }
   return liked;
 }

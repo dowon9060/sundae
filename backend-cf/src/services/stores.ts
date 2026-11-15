@@ -180,13 +180,27 @@ export async function listNearbyStores(
   }
 
   if (opts.clientId && results.length > 0) {
-    const likedIds = await getLikedStoreIds(
-      env,
-      opts.clientId,
-      results.map((r) => r.id)
-    );
-    for (const item of results) {
-      item.liked = likedIds.has(item.id);
+    try {
+      const likedIds = await getLikedStoreIds(
+        env,
+        opts.clientId,
+        results.map((r) => r.id)
+      );
+      for (const item of results) {
+        item.liked = likedIds.has(item.id);
+      }
+    } catch (err) {
+      // likes 테이블 미적용 등으로 목록 전체가 500 나지 않게 한다
+      console.error(
+        JSON.stringify({
+          level: 'warn',
+          message: 'liked_lookup_failed',
+          detail: err instanceof Error ? err.message : 'unknown',
+        })
+      );
+      for (const item of results) {
+        item.liked = false;
+      }
     }
   }
 
