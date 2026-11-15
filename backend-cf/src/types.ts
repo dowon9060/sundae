@@ -11,7 +11,13 @@ export type ReportReason =
 export interface Env {
   DB: D1Database;
   LOCATION_STALE_DAYS: string;
-  ADMIN_KEY: string;
+  /** local | production */
+  ENVIRONMENT?: string;
+  /**
+   * 관리자 키 — wrangler.toml vars에 두지 말고
+   * 로컬 .dev.vars / 배포 secret 으로만 주입한다.
+   */
+  ADMIN_KEY?: string;
   /** Slack Incoming Webhook. 없으면 로그로 알림을 남긴다. */
   SLACK_WEBHOOK_URL?: string;
 }
@@ -34,6 +40,7 @@ export interface StoreRow {
   status: StoreStatus;
   business_status: BusinessStatus;
   created_at: string;
+  like_count?: number;
 }
 
 export interface StoreLocationRow {
@@ -86,4 +93,7 @@ export interface NearbyStoreResult extends StoreRow {
   today_hours_label: string | null;
   /** 선택한 요일 기준 휴무 여부 */
   is_closed_on_day: boolean;
+  like_count: number;
+  /** client_id가 있을 때만 */
+  liked?: boolean;
 }

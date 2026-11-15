@@ -9,6 +9,7 @@ import type {
   StoreRow,
 } from '../types';
 import { haversineMeters, isLocationStale } from './distance';
+import { getLikedStoreIds } from './likes';
 
 const DAY_LABELS = ['일', '월', '화', '수', '목', '금', '토'];
 
@@ -60,6 +61,8 @@ export async function listNearbyStores(
     /** 0=일 … 6=토. 해당 요일 운영(휴무 아님)만 반환 */
     dayOfWeek?: number;
     excludeStale?: boolean;
+    /** 기기 클라이언트 ID — 있으면 liked 여부 포함 */
+    clientId?: string;
   }
 ): Promise<NearbyStoreResult[]> {
   const staleDays = Number(env.LOCATION_STALE_DAYS || '14');
@@ -172,7 +175,19 @@ export async function listNearbyStores(
       menu_summary: menuSummary?.summary ?? null,
       today_hours_label,
       is_closed_on_day,
+      like_count: Number(row.like_count ?? 0),
     });
+  }
+
+  if (opts.clientId && results.length > 0) {
+    const likedIds = await getLikedStoreIds(
+      env,
+      opts.clientId,
+      results.map((r) => r.id)
+    );
+    for (const item of results) {
+      item.liked = likedIds.has(item.id);
+    }
   }
 
   // 운영 중인 곳 우선, 같은 그룹 안에서는 거리순

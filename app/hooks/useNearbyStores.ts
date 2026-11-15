@@ -54,7 +54,6 @@ export function useNearbyStores(
         return;
       }
 
-      // force여도 동일 키가 아주 짧은 시간에 반복되면 무시 (루프 방지)
       if (
         opts?.force &&
         key === lastKeyRef.current &&
@@ -85,7 +84,6 @@ export function useNearbyStores(
         setError(
           e instanceof Error ? e.message : '판매점을 불러오지 못했습니다.'
         );
-        // 실패 시 기존 목록은 유지 (깜빡임·빈 화면 루프 완화)
       } finally {
         if (seq === seqRef.current) {
           inflightRef.current = false;
@@ -96,10 +94,23 @@ export function useNearbyStores(
     [rLat, rLng, category, dayOfWeek, enabled]
   );
 
+  const updateStoreLike = useCallback(
+    (storeId: string, liked: boolean, likeCount: number) => {
+      setStores((prev) =>
+        prev.map((s) =>
+          s.id === storeId
+            ? { ...s, liked, like_count: likeCount }
+            : s
+        )
+      );
+    },
+    []
+  );
+
   useEffect(() => {
     if (!enabled) return;
     void refresh();
   }, [refresh, enabled]);
 
-  return { stores, loading, error, refresh };
+  return { stores, loading, error, refresh, updateStoreLike };
 }

@@ -18,7 +18,21 @@ npm run dev
 
 기본 URL: `http://127.0.0.1:8787`
 
-관리자 키(로컬): `dev-admin-key` (`X-Admin-Key` 헤더)
+관리자 키(로컬): `backend-cf/.dev.vars`의 `ADMIN_KEY` (`X-Admin-Key` 헤더)  
+예시 파일: `backend-cf/.dev.vars.example` → `.dev.vars`로 복사
+
+```bash
+cd backend-cf
+cp .dev.vars.example .dev.vars
+# ADMIN_KEY 값을 충분히 긴 임의 문자열로 수정
+```
+
+배포 시:
+
+```bash
+npx wrangler secret put ADMIN_KEY
+# wrangler.toml 의 ENVIRONMENT 를 production 으로 설정
+```
 
 ### 2. 앱
 
@@ -37,7 +51,8 @@ npm start
 
 | Method | Path | 설명 |
 |--------|------|------|
-| GET | `/api/stores/nearby?lat&lng&category&radius&day` | 주변 판매점 (거리순, 기본 1.5km, day=0일~6토 운영만) |
+| GET | `/api/stores/nearby?lat&lng&category&radius&day&client_id` | 주변 판매점 (거리순, 기본 5km, 요일·좋아요) |
+| POST | `/api/stores/:id/likes` | 좋아요 토글 (`client_id`) |
 | GET | `/api/stores/:id` | 판매점 상세 |
 | GET | `/api/stores/:id/menus` | 메뉴 |
 | GET | `/api/stores/:id/hours` | 요일별 운영시간 |

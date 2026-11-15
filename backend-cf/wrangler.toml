@@ -10,9 +10,12 @@ migrations_dir = "migrations"
 
 [vars]
 LOCATION_STALE_DAYS = "14"
-ADMIN_KEY = "dev-admin-key"
-# Slack Incoming Webhook은 시크릿으로 설정: npx wrangler secret put SLACK_WEBHOOK_URL
-# SLACK_WEBHOOK_URL = ""
+# local | production — production에서는 /dev/* 비활성
+ENVIRONMENT = "local"
+# ADMIN_KEY 는 저장소에 넣지 마세요.
+# 로컬: backend-cf/.dev.vars (참고: .dev.vars.example)
+# 배포: npx wrangler secret put ADMIN_KEY
+# Slack: npx wrangler secret put SLACK_WEBHOOK_URL
 
 [observability]
 enabled = true

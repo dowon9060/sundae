@@ -34,7 +34,7 @@ export default function HomeScreen() {
     }, [])
   );
 
-  const { stores, loading, error, refresh } = useNearbyStores(
+  const { stores, loading, error, refresh, updateStoreLike } = useNearbyStores(
     location?.lat,
     location?.lng,
     category,
@@ -115,6 +115,7 @@ export default function HomeScreen() {
         error={listMessage}
         onRefresh={onRefresh}
         onPressStore={(id) => router.push(`/store/${id}`)}
+        onLikeChange={updateStoreLike}
       />
       <RegisterStoreCard onPress={() => setRegisterOpen(true)} />
       <RegisterStoreSheet

@@ -3,6 +3,7 @@ import type { Env, StoreCategory } from '../types';
 import { createStoreRegistration } from '../services/registrations';
 import { createStoreReport, isValidReportReason } from '../services/reports';
 import { REPORT_REASON_LABELS } from '../services/notify';
+import { isValidClientId, toggleStoreLike } from '../services/likes';
 import { getHours, getMenus, getStoreById, listNearbyStores } from '../services/stores';
 
 const stores = new Hono<{ Bindings: Env }>();
@@ -16,6 +17,10 @@ const REG_ERROR_MESSAGES: Record<string, string> = {
   INVALID_MENU: '메뉴 형식이 올바르지 않습니다.',
   INVALID_TODAY_HOURS: '오늘 운영 시간 형식이 올바르지 않습니다.',
   INVALID_LOCATION: '위치 형식이 올바르지 않습니다.',
+  TOO_LONG_NAME: '이름이 너무 깁니다. 80자 이내로 입력해 주세요.',
+  TOO_LONG_MENU: '메뉴가 너무 깁니다. 500자 이내로 입력해 주세요.',
+  TOO_LONG_TODAY_HOURS: '오늘 운영 시간이 너무 깁니다.',
+  TOO_LONG_LOCATION: '위치가 너무 깁니다. 200자 이내로 입력해 주세요.',
   INVALID_PHOTO_MENU: '메뉴 사진 형식이 올바르지 않습니다.',
   INVALID_PHOTO_LOCATION: '위치 캡쳐 사진 형식이 올바르지 않습니다.',
   INVALID_PHOTO_TRUCK: '푸드트럭 사진 형식이 올바르지 않습니다.',
@@ -40,6 +45,8 @@ stores.get('/nearby', async (c) => {
       ? dayParsed
       : undefined;
   const excludeStale = c.req.query('exclude_stale') === '1';
+  const clientRaw = c.req.query('client_id');
+  const clientId = isValidClientId(clientRaw) ? clientRaw : undefined;
 
   const data = await listNearbyStores(c.env, {
     lat,
@@ -48,9 +55,44 @@ stores.get('/nearby', async (c) => {
     radiusM: Number.isNaN(radius) ? 5000 : radius,
     dayOfWeek,
     excludeStale,
+    clientId,
   });
 
   return c.json({ data });
+});
+
+stores.post('/:id/likes', async (c) => {
+  const id = c.req.param('id');
+  let body: { client_id?: string };
+  try {
+    body = await c.req.json();
+  } catch {
+    return c.json({ error: '요청 본문을 확인할 수 없습니다.' }, 400);
+  }
+
+  if (!isValidClientId(body.client_id)) {
+    return c.json({ error: '클라이언트 식별자가 올바르지 않습니다.' }, 400);
+  }
+
+  try {
+    const data = await toggleStoreLike(c.env, id, body.client_id);
+    return c.json({ data });
+  } catch (err) {
+    if (err instanceof Error && err.message === 'STORE_NOT_FOUND') {
+      return c.json({ error: '판매점을 찾을 수 없습니다.' }, 404);
+    }
+    console.error(
+      JSON.stringify({
+        level: 'error',
+        message: 'store_like_toggle_failed',
+        detail: err instanceof Error ? err.message : 'unknown',
+      })
+    );
+    return c.json(
+      { error: '좋아요를 반영하지 못했습니다. 잠시 후 다시 시도해 주세요.' },
+      500
+    );
+  }
 });
 
 stores.post('/registration-requests', async (c) => {

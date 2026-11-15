@@ -21,6 +21,7 @@ interface Props {
   onChangeDay: (dayOfWeek: number) => void;
   onRefresh: () => void;
   onPressStore: (id: string) => void;
+  onLikeChange?: (storeId: string, liked: boolean, likeCount: number) => void;
 }
 
 const EMPTY_NO_STORES = '주변에 등록된 판매점이 없습니다.';
@@ -43,6 +44,7 @@ export function StoreList({
   onChangeDay,
   onRefresh,
   onPressStore,
+  onLikeChange,
 }: Props) {
   return (
     <View style={styles.container}>
@@ -63,7 +65,11 @@ export function StoreList({
           data={stores}
           keyExtractor={(item) => item.id}
           renderItem={({ item }) => (
-            <StoreCard store={item} onPress={() => onPressStore(item.id)} />
+            <StoreCard
+              store={item}
+              onPress={() => onPressStore(item.id)}
+              onLikeChange={onLikeChange}
+            />
           )}
           refreshControl={
             <RefreshControl

@@ -13,9 +13,42 @@ function timingSafeEqual(a: string, b: string): boolean {
   return result === 0;
 }
 
+const WEAK_ADMIN_KEYS = new Set([
+  '',
+  'dev-admin-key',
+  'admin',
+  'password',
+  'secret',
+]);
+
 admin.use('*', async (c, next) => {
+  const configured = (c.env.ADMIN_KEY || '').trim();
+  const isProd = (c.env.ENVIRONMENT || 'local') === 'production';
+
+  if (!configured || WEAK_ADMIN_KEYS.has(configured)) {
+    console.error(
+      JSON.stringify({
+        level: 'error',
+        message: 'admin_key_not_configured',
+        environment: c.env.ENVIRONMENT || 'local',
+      })
+    );
+    return c.json(
+      {
+        error: isProd
+          ? '관리자 API가 비활성화되어 있습니다.'
+          : 'ADMIN_KEY가 설정되지 않았습니다. .dev.vars를 확인하세요.',
+      },
+      503
+    );
+  }
+
+  if (isProd && configured.length < 24) {
+    return c.json({ error: '관리자 API가 비활성화되어 있습니다.' }, 503);
+  }
+
   const key = c.req.header('X-Admin-Key') || '';
-  if (!timingSafeEqual(key, c.env.ADMIN_KEY)) {
+  if (!timingSafeEqual(key, configured)) {
     return c.json({ error: '관리자 인증이 필요합니다.' }, 401);
   }
   await next();

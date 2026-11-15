@@ -1,0 +1,7 @@
+# 로컬 전용 시크릿 — 이 파일을 .dev.vars 로 복사해 사용하세요.
+# .dev.vars 는 git에 올리지 않습니다.
+#
+# cp .dev.vars.example .dev.vars
+
+ADMIN_KEY=replace-with-a-long-random-local-admin-key
+# SLACK_WEBHOOK_URL=

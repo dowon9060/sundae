@@ -1,7 +1,17 @@
 import { Ionicons } from '@expo/vector-icons';
-import { Image, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
+import { useEffect, useState } from 'react';
+import {
+  ActivityIndicator,
+  Image,
+  Platform,
+  Pressable,
+  StyleSheet,
+  Text,
+  View,
+} from 'react-native';
 import { foodTruckIcon } from '../constants/images';
 import { colors, fonts, layout, typography } from '../constants/theme';
+import { toggleStoreLike } from '../services/api';
 import {
   businessStatusLabel,
   formatDistance,
@@ -11,9 +21,10 @@ import {
 interface Props {
   store: NearbyStore;
   onPress: () => void;
+  onLikeChange?: (storeId: string, liked: boolean, likeCount: number) => void;
 }
 
-export function StoreCard({ store, onPress }: Props) {
+export function StoreCard({ store, onPress, onLikeChange }: Props) {
   const statusLabel = businessStatusLabel(store.business_status);
   const statusColor =
     store.business_status === 'confirmed_open'
@@ -23,6 +34,45 @@ export function StoreCard({ store, onPress }: Props) {
         : colors.textMuted;
 
   const closed = Boolean(store.is_closed_on_day);
+  const [liked, setLiked] = useState(Boolean(store.liked));
+  const [likeCount, setLikeCount] = useState(Number(store.like_count ?? 0));
+  const [liking, setLiking] = useState(false);
+  const [likeError, setLikeError] = useState<string | null>(null);
+
+  useEffect(() => {
+    setLiked(Boolean(store.liked));
+    setLikeCount(Number(store.like_count ?? 0));
+  }, [store.id, store.liked, store.like_count]);
+
+  const onPressLike = async () => {
+    if (liking) return;
+    setLiking(true);
+    setLikeError(null);
+
+    const prevLiked = liked;
+    const prevCount = likeCount;
+    const nextLiked = !prevLiked;
+    const nextCount = Math.max(0, prevCount + (nextLiked ? 1 : -1));
+    setLiked(nextLiked);
+    setLikeCount(nextCount);
+
+    try {
+      const result = await toggleStoreLike(store.id);
+      setLiked(result.liked);
+      setLikeCount(result.like_count);
+      onLikeChange?.(store.id, result.liked, result.like_count);
+    } catch (e) {
+      setLiked(prevLiked);
+      setLikeCount(prevCount);
+      setLikeError(
+        e instanceof Error
+          ? e.message
+          : '좋아요를 반영하지 못했습니다. 잠시 후 다시 시도해 주세요.'
+      );
+    } finally {
+      setLiking(false);
+    }
+  };
 
   return (
     <Pressable
@@ -39,9 +89,42 @@ export function StoreCard({ store, onPress }: Props) {
         />
       </View>
       <View style={styles.body}>
-        <Text style={[styles.name, closed && styles.textMuted]} numberOfLines={1}>
-          {store.name}
-        </Text>
+        <View style={styles.nameRow}>
+          <Text
+            style={[styles.name, closed && styles.textMuted]}
+            numberOfLines={1}
+          >
+            {store.name}
+          </Text>
+          <Pressable
+            style={styles.likeBtn}
+            onPress={(e) => {
+              e.stopPropagation?.();
+              void onPressLike();
+            }}
+            hitSlop={8}
+            accessibilityRole="button"
+            accessibilityLabel={liked ? '좋아요 취소' : '좋아요'}
+          >
+            {liking ? (
+              <ActivityIndicator size="small" color={colors.danger} />
+            ) : (
+              <Ionicons
+                name={liked ? 'heart' : 'heart-outline'}
+                size={20}
+                color={liked ? colors.danger : colors.textSecondary}
+              />
+            )}
+            <Text style={[styles.likeCount, liked && styles.likeCountActive]}>
+              {likeCount}
+            </Text>
+          </Pressable>
+        </View>
+        {likeError ? (
+          <Text style={styles.likeError} numberOfLines={1}>
+            {likeError}
+          </Text>
+        ) : null}
         {store.menu_summary ? (
           <Text style={[styles.menu, closed && styles.textMuted]} numberOfLines={1}>
             {store.menu_summary}
@@ -118,10 +201,38 @@ const styles = StyleSheet.create({
     paddingLeft: 16,
     paddingRight: 4,
   },
+  nameRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
   name: {
+    flex: 1,
     fontFamily: fonts.bold,
     color: colors.text,
     fontSize: 16,
+  },
+  likeBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 3,
+    minWidth: 40,
+    paddingVertical: 2,
+    paddingHorizontal: 2,
+  },
+  likeCount: {
+    fontFamily: fonts.medium,
+    fontSize: 13,
+    color: colors.textSecondary,
+    minWidth: 12,
+  },
+  likeCountActive: {
+    color: colors.danger,
+  },
+  likeError: {
+    fontFamily: fonts.regular,
+    fontSize: 11,
+    color: colors.danger,
   },
   menu: {
     ...typography.caption,

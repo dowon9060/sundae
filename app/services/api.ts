@@ -8,6 +8,7 @@ import type {
   StoreDetail,
 } from '../types/store';
 import { apiFetch } from './apiClient';
+import { getClientId } from './clientId';
 
 const API_BASE =
   process.env.EXPO_PUBLIC_API_URL?.replace(/\/$/, '') ||
@@ -42,8 +43,33 @@ export async function fetchNearbyStores(params: {
   if (params.day != null) {
     qs.set('day', String(params.day));
   }
+  try {
+    const clientId = await getClientId();
+    qs.set('client_id', clientId);
+  } catch {
+    // 클라이언트 ID 없이도 목록은 조회
+  }
   const json = await request<{ data: NearbyStore[] }>(
     `/api/stores/nearby?${qs}`
+  );
+  return (json.data ?? []).map((s) => ({
+    ...s,
+    like_count: Number(s.like_count ?? 0),
+    liked: Boolean(s.liked),
+  }));
+}
+
+export async function toggleStoreLike(
+  storeId: string
+): Promise<{ liked: boolean; like_count: number }> {
+  const clientId = await getClientId();
+  const json = await request<{ data: { liked: boolean; like_count: number } }>(
+    `/api/stores/${storeId}/likes`,
+    {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ client_id: clientId }),
+    }
   );
   return json.data;
 }

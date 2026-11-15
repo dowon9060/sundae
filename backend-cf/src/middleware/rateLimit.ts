@@ -3,17 +3,17 @@ import type { Env } from '../types';
 
 type Bucket = number[];
 
-/** isolate 단위 메모리 버킷 (프로덕션은 CF Rate Limiting/KV로 교체 권장) */
+/** isolate 단위 메모리 버킷 (GET 등 가벼운 요청용) */
 const buckets = new Map<string, Bucket>();
 
 const MAX_KEYS = 5000;
 
-/** 로컬 개발용 — 버킷 초기화 */
+/** 로컬 개발용 — 메모리 버킷 초기화 */
 export function clearRateLimitBuckets() {
   buckets.clear();
 }
 
-function clientIp(headers: Headers): string {
+export function clientIp(headers: Headers): string {
   const cf = headers.get('cf-connecting-ip');
   if (cf) return cf.trim();
   const xff = headers.get('x-forwarded-for');
@@ -25,7 +25,7 @@ function prune(bucket: Bucket, windowStart: number): Bucket {
   return bucket.filter((t) => t >= windowStart);
 }
 
-function take(
+function takeMemory(
   key: string,
   windowMs: number,
   max: number
@@ -57,16 +57,76 @@ function take(
   return { ok: true, retryAfterSec: 0 };
 }
 
+/** D1 기반 — 쓰기 API용 (isolate/PoP 간 공유) */
+async function takeDurable(
+  db: D1Database,
+  key: string,
+  windowMs: number,
+  max: number
+): Promise<{ ok: boolean; retryAfterSec: number }> {
+  const now = Date.now();
+  const windowStart = now - windowMs;
+
+  // 오래된 히트 정리 (해당 키만)
+  await db
+    .prepare(`DELETE FROM rate_limit_hits WHERE bucket_key = ? AND hit_at < ?`)
+    .bind(key, windowStart)
+    .run();
+
+  const row = await db
+    .prepare(
+      `SELECT COUNT(*) AS cnt, MIN(hit_at) AS oldest
+       FROM rate_limit_hits
+       WHERE bucket_key = ? AND hit_at >= ?`
+    )
+    .bind(key, windowStart)
+    .first<{ cnt: number; oldest: number | null }>();
+
+  const cnt = Number(row?.cnt ?? 0);
+  if (cnt >= max) {
+    const oldest = Number(row?.oldest ?? now);
+    const retryAfterSec = Math.max(1, Math.ceil((oldest + windowMs - now) / 1000));
+    return { ok: false, retryAfterSec };
+  }
+
+  await db
+    .prepare(`INSERT INTO rate_limit_hits (bucket_key, hit_at) VALUES (?, ?)`)
+    .bind(key, now)
+    .run();
+
+  return { ok: true, retryAfterSec: 0 };
+}
+
 export function rateLimit(opts: {
   windowMs: number;
   max: number;
   /** 경로 prefix로 버킷 분리 */
   name: string;
+  /** true면 D1 durable 제한 (등록·제보·좋아요 등) */
+  durable?: boolean;
 }) {
   return createMiddleware<{ Bindings: Env }>(async (c, next) => {
     const ip = clientIp(c.req.raw.headers);
     const key = `${opts.name}:${ip}`;
-    const result = take(key, opts.windowMs, opts.max);
+
+    let result: { ok: boolean; retryAfterSec: number };
+    if (opts.durable) {
+      try {
+        result = await takeDurable(c.env.DB, key, opts.windowMs, opts.max);
+      } catch (err) {
+        // 마이그레이션 전·일시 오류 시 메모리 폴백 (가용성 우선)
+        console.error(
+          JSON.stringify({
+            level: 'warn',
+            message: 'durable_rate_limit_fallback',
+            detail: err instanceof Error ? err.message : 'unknown',
+          })
+        );
+        result = takeMemory(key, opts.windowMs, opts.max);
+      }
+    } else {
+      result = takeMemory(key, opts.windowMs, opts.max);
+    }
 
     c.header('X-RateLimit-Limit', String(opts.max));
 

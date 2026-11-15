@@ -1,7 +1,13 @@
 import type { Env } from '../types';
 import { notifyStoreRegistration } from './notify';
 
-const MAX_PHOTO_CHARS = 450_000;
+/** base64 data URL 기준 대략 150KB 이미지 */
+const MAX_PHOTO_CHARS = 200_000;
+const MAX_NAME = 80;
+const MAX_MENU = 500;
+const MAX_TODAY_HOURS = 80;
+const MAX_LOCATION = 200;
+const DATA_IMAGE_RE = /^data:image\/(jpeg|jpg|png|webp);base64,[A-Za-z0-9+/=\s]+$/i;
 
 export interface RegistrationInput {
   name: string;
@@ -15,13 +21,20 @@ export interface RegistrationInput {
   photo_truck?: string | null;
 }
 
-function trimRequired(value: unknown, label: string): string {
+function trimRequired(
+  value: unknown,
+  label: string,
+  maxLen: number
+): string {
   if (typeof value !== 'string') {
     throw new Error(`INVALID_${label}`);
   }
   const next = value.trim();
   if (!next) {
     throw new Error(`EMPTY_${label}`);
+  }
+  if (next.length > maxLen) {
+    throw new Error(`TOO_LONG_${label}`);
   }
   return next;
 }
@@ -34,25 +47,45 @@ function optionalPhoto(value: unknown, field: string): string | null {
   if (value.length > MAX_PHOTO_CHARS) {
     throw new Error(`PHOTO_TOO_LARGE_${field}`);
   }
-  if (!value.startsWith('data:image/')) {
+  const compact = value.replace(/\s+/g, '');
+  if (!DATA_IMAGE_RE.test(compact)) {
     throw new Error(`INVALID_PHOTO_${field}`);
   }
-  return value;
+  return compact;
+}
+
+function optionalCoord(value: unknown): number | null {
+  if (value == null || value === '') return null;
+  const n = Number(value);
+  if (Number.isNaN(n) || n < -90 || n > 90) {
+    // lat/lng 범위를 느슨히: 아래에서 lat/lng 각각 검사
+    if (Number.isNaN(n)) return null;
+  }
+  return Number.isFinite(n) ? n : null;
 }
 
 export async function createStoreRegistration(
   env: Env,
   raw: RegistrationInput
 ) {
-  const name = trimRequired(raw.name, 'NAME');
-  const menu = trimRequired(raw.menu, 'MENU');
-  const today_hours = trimRequired(raw.today_hours, 'TODAY_HOURS');
-  const location_text = trimRequired(raw.location_text, 'LOCATION');
+  const name = trimRequired(raw.name, 'NAME', MAX_NAME);
+  const menu = trimRequired(raw.menu, 'MENU', MAX_MENU);
+  const today_hours = trimRequired(raw.today_hours, 'TODAY_HOURS', MAX_TODAY_HOURS);
+  const location_text = trimRequired(raw.location_text, 'LOCATION', MAX_LOCATION);
 
-  const lat =
-    raw.lat != null && !Number.isNaN(Number(raw.lat)) ? Number(raw.lat) : null;
-  const lng =
-    raw.lng != null && !Number.isNaN(Number(raw.lng)) ? Number(raw.lng) : null;
+  let lat = optionalCoord(raw.lat);
+  let lng = optionalCoord(raw.lng);
+  if (lat != null && (lat < -90 || lat > 90)) {
+    throw new Error('INVALID_LOCATION');
+  }
+  if (lng != null && (lng < -180 || lng > 180)) {
+    throw new Error('INVALID_LOCATION');
+  }
+  // 한쪽만 오면 무효 처리
+  if ((lat == null) !== (lng == null)) {
+    lat = null;
+    lng = null;
+  }
 
   const photo_menu = optionalPhoto(raw.photo_menu, 'MENU');
   const photo_location = optionalPhoto(raw.photo_location, 'LOCATION');
