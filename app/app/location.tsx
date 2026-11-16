@@ -161,12 +161,10 @@ export default function LocationScreen() {
         initialLat={location?.lat ?? DEFAULT_LOCATION.lat}
         initialLng={location?.lng ?? DEFAULT_LOCATION.lng}
         onClose={() => setMapOpen(false)}
-        onConfirm={(lat, lng, address) => {
-          void (async () => {
-            await setManualLocation(lat, lng, address);
-            setMapOpen(false);
-            router.back();
-          })();
+        onConfirm={async (lat, lng, address) => {
+          await setManualLocation(lat, lng, address);
+          setMapOpen(false);
+          router.back();
         }}
       />
     </View>

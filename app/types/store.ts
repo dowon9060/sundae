@@ -40,6 +40,8 @@ export interface NearbyStore {
   is_closed_on_day?: boolean;
   like_count: number;
   liked?: boolean;
+  verify_count: number;
+  verified?: boolean;
 }
 
 export interface StoreDetail extends Omit<NearbyStore, 'distance_m'> {

@@ -22,6 +22,11 @@ interface Props {
   onRefresh: () => void;
   onPressStore: (id: string) => void;
   onLikeChange?: (storeId: string, liked: boolean, likeCount: number) => void;
+  onVerifyChange?: (
+    storeId: string,
+    verified: boolean,
+    verifyCount: number
+  ) => void;
 }
 
 const EMPTY_NO_STORES = '주변에 등록된 판매점이 없습니다.';
@@ -45,6 +50,7 @@ export function StoreList({
   onRefresh,
   onPressStore,
   onLikeChange,
+  onVerifyChange,
 }: Props) {
   return (
     <View style={styles.container}>
@@ -69,6 +75,7 @@ export function StoreList({
               store={item}
               onPress={() => onPressStore(item.id)}
               onLikeChange={onLikeChange}
+              onVerifyChange={onVerifyChange}
             />
           )}
           refreshControl={

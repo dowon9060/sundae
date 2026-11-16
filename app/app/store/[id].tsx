@@ -226,6 +226,7 @@ export default function StoreDetailScreen() {
           note={store.location_note}
           lat={store.lat}
           lng={store.lng}
+          category={store.category}
           onPress={() => setMapOpen(true)}
         />
 
@@ -254,6 +255,7 @@ export default function StoreDetailScreen() {
         lat={store.lat}
         lng={store.lng}
         name={store.name}
+        category={store.category}
         onClose={() => setMapOpen(false)}
       />
       <NavigationSheet

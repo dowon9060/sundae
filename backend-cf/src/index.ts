@@ -64,6 +64,10 @@ app.use(
   rateLimit({ name: 'like', windowMs: 60_000, max: 30, durable: true })
 );
 app.use(
+  '/api/stores/:id/verifications',
+  rateLimit({ name: 'verify', windowMs: 60_000, max: 20, durable: true })
+);
+app.use(
   '/api/analytics/app-open',
   rateLimit({ name: 'app-open', windowMs: 60_000, max: 10, durable: true })
 );

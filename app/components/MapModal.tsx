@@ -1,8 +1,10 @@
+import { useMemo } from 'react';
 import { Modal, Pressable, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import type { MapStoreCategory } from '../constants/mapMarkerIcons';
 import { colors, fonts, layout, spacing, typography } from '../constants/theme';
 import { openNaverMapPlace } from '../services/navigation';
-import { NaverMap } from './NaverMap';
+import { NaverMap, type MapMarker } from './NaverMap';
 
 interface Props {
   visible: boolean;
@@ -11,6 +13,7 @@ interface Props {
   lat: number;
   lng: number;
   name?: string;
+  category?: MapStoreCategory;
   onClose: () => void;
 }
 
@@ -21,9 +24,22 @@ export function MapModal({
   lat,
   lng,
   name,
+  category,
   onClose,
 }: Props) {
   const title = name || note || address;
+  const markers = useMemo<MapMarker[]>(
+    () => [
+      {
+        lat,
+        lng,
+        label: title,
+        kind: 'store',
+        category: category || 'other',
+      },
+    ],
+    [lat, lng, title, category]
+  );
 
   return (
     <Modal visible={visible} animationType="slide" presentationStyle="fullScreen">
@@ -41,8 +57,9 @@ export function MapModal({
               lat={lat}
               lng={lng}
               zoom={16}
-              label={title}
+              lockCenter
               navigable
+              markers={markers}
             />
           ) : null}
         </View>

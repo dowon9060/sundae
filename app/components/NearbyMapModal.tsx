@@ -36,6 +36,10 @@ interface Props {
 }
 
 const RADIUS_M = 5000;
+/** 카메라 idle 연속 호출 방지 */
+const FETCH_GAP_MS = 700;
+/** 너무 가까운 재조회 스킵 (약 40m) */
+const MIN_MOVE_DEG = 0.0004;
 
 export function NearbyMapModal({
   visible,
@@ -53,6 +57,7 @@ export function NearbyMapModal({
   const [loadingNearby, setLoadingNearby] = useState(false);
   const seqRef = useRef(0);
   const lastFetchRef = useRef(0);
+  const lastQueryRef = useRef({ lat: centerLat, lng: centerLng });
 
   useEffect(() => {
     if (!visible) {
@@ -60,32 +65,36 @@ export function NearbyMapModal({
       return;
     }
     setMapStores(initialStores);
-  }, [visible, initialStores]);
+    lastQueryRef.current = { lat: centerLat, lng: centerLng };
+  }, [visible, initialStores, centerLat, centerLng]);
 
-  const markers = useMemo<MapMarker[]>(() => {
-    const storePins: MapMarker[] = mapStores.map((s) => ({
-      lat: s.lat,
-      lng: s.lng,
-      label: s.name,
-      kind: 'store' as const,
-      category: resolveMarkerCategory(s.category),
-    }));
-    return [
-      {
-        lat: centerLat,
-        lng: centerLng,
-        label: '현위치',
-        kind: 'user' as const,
-      },
-      ...storePins,
-    ];
-  }, [mapStores, centerLat, centerLng]);
+  const markers = useMemo<MapMarker[]>(
+    () =>
+      mapStores.map((s) => ({
+        lat: s.lat,
+        lng: s.lng,
+        label: s.name,
+        kind: 'store' as const,
+        category: resolveMarkerCategory(s.category),
+      })),
+    [mapStores]
+  );
 
   const loadNearby = useCallback(
     async (lat: number, lng: number) => {
       const now = Date.now();
-      if (now - lastFetchRef.current < 600) return;
+      if (now - lastFetchRef.current < FETCH_GAP_MS) return;
+
+      const prev = lastQueryRef.current;
+      if (
+        Math.abs(prev.lat - lat) < MIN_MOVE_DEG &&
+        Math.abs(prev.lng - lng) < MIN_MOVE_DEG
+      ) {
+        return;
+      }
+
       lastFetchRef.current = now;
+      lastQueryRef.current = { lat, lng };
       const seq = ++seqRef.current;
       setLoadingNearby(true);
       try {
@@ -98,11 +107,16 @@ export function NearbyMapModal({
         });
         if (seq !== seqRef.current) return;
         setMapStores(data);
-        setSelected((prev) =>
-          prev && data.some((s) => s.id === prev.id) ? prev : null
+        setSelected((prevSel) =>
+          prevSel && data.some((s) => s.id === prevSel.id) ? prevSel : null
         );
-      } catch {
-        // 네트워크 실패 시 기존 마커 유지
+      } catch (err) {
+        if (__DEV__) {
+          console.warn(
+            '[NearbyMapModal] nearby fetch failed',
+            err instanceof Error ? err.message : err
+          );
+        }
       } finally {
         if (seq === seqRef.current) setLoadingNearby(false);
       }
@@ -122,9 +136,8 @@ export function NearbyMapModal({
 
         <View style={styles.hintRow}>
           <Text style={styles.hint}>
-            {mapStores.length > 0
-              ? `지도 중심 주변 ${mapStores.length}곳 · 이동 후 멈추면 다시 불러옵니다.`
-              : '지도를 움직인 뒤 멈추면 주변 판매점을 불러옵니다.'}
+            지도를 옮기면 중앙 핀 기준으로 주변 판매점을 불러옵니다
+            {mapStores.length > 0 ? ` · ${mapStores.length}곳` : ''}.
           </Text>
           {loadingNearby ? (
             <ActivityIndicator size="small" color={colors.textSecondary} />
@@ -140,13 +153,15 @@ export function NearbyMapModal({
               zoom={15}
               navigable
               lockCenter
+              centerPin
+              centerPinLabel="탐색 위치"
+              centerPinTone="browse"
               markers={markers}
               onCameraIdle={(lat, lng) => {
                 void loadNearby(lat, lng);
               }}
               onPressMarker={(index) => {
-                if (index <= 0) return;
-                const store = mapStores[index - 1];
+                const store = mapStores[index];
                 if (!store) return;
                 setSelected(store);
               }}

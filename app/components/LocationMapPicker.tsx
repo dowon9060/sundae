@@ -25,7 +25,7 @@ interface Props {
   initialLat: number;
   initialLng: number;
   onClose: () => void;
-  onConfirm: (lat: number, lng: number, address: string) => void;
+  onConfirm: (lat: number, lng: number, address: string) => void | Promise<void>;
 }
 
 export function LocationMapPicker({
@@ -39,10 +39,13 @@ export function LocationMapPicker({
   const [address, setAddress] = useState('주소를 확인하는 중...');
   const [resolving, setResolving] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     if (!visible) return;
     setCoord({ lat: initialLat, lng: initialLng });
+    setError(null);
+    setAddress('주소를 확인하는 중...');
   }, [visible, initialLat, initialLng]);
 
   useEffect(() => {
@@ -50,16 +53,63 @@ export function LocationMapPicker({
     let cancelled = false;
     setResolving(true);
     void (async () => {
-      const label = await reverseGeocodeAddress(coord.lat, coord.lng);
-      if (!cancelled) {
-        setAddress(label);
-        setResolving(false);
+      try {
+        const label = await reverseGeocodeAddress(coord.lat, coord.lng);
+        if (!cancelled) {
+          setAddress(label);
+          setResolving(false);
+        }
+      } catch (err) {
+        if (!cancelled) {
+          setAddress(`${coord.lat.toFixed(5)}, ${coord.lng.toFixed(5)}`);
+          setResolving(false);
+          if (__DEV__) {
+            console.warn(
+              '[LocationMapPicker] reverse geocode failed',
+              err instanceof Error ? err.message : err
+            );
+          }
+        }
       }
     })();
     return () => {
       cancelled = true;
     };
   }, [visible, coord.lat, coord.lng]);
+
+  const applyCenter = (lat: number, lng: number) => {
+    setCoord((prev) => {
+      if (
+        Math.abs(prev.lat - lat) < 0.00001 &&
+        Math.abs(prev.lng - lng) < 0.00001
+      ) {
+        return prev;
+      }
+      return { lat, lng };
+    });
+  };
+
+  const onPressConfirm = () => {
+    if (saving || resolving) return;
+    setSaving(true);
+    setError(null);
+    void (async () => {
+      try {
+        const label = resolving
+          ? await reverseGeocodeAddress(coord.lat, coord.lng)
+          : address;
+        await onConfirm(coord.lat, coord.lng, label);
+      } catch (err) {
+        setError(
+          err instanceof Error
+            ? err.message
+            : '위치를 저장하지 못했습니다. 다시 시도해 주세요.'
+        );
+      } finally {
+        setSaving(false);
+      }
+    })();
+  };
 
   return (
     <Modal visible={visible} animationType="slide" presentationStyle="fullScreen">
@@ -72,7 +122,8 @@ export function LocationMapPicker({
         </View>
 
         <Text style={styles.hint}>
-          지도를 움직이면 중앙 핀 위치가 선택됩니다. 멈춘 뒤 주소를 확인하세요.
+          지도를 움직이면 중앙의 내 위치가 바뀝니다. 멈춘 뒤 주소를 확인하고
+          설정하세요.
         </Text>
 
         <View style={styles.mapWrap}>
@@ -82,17 +133,23 @@ export function LocationMapPicker({
               lat={initialLat}
               lng={initialLng}
               zoom={16}
+              navigable
               centerPin
+              centerPinLabel="내 위치"
+              centerPinTone="user"
               lockCenter
-              onPick={(lat, lng) => setCoord({ lat, lng })}
+              onPick={applyCenter}
+              onCameraIdle={applyCenter}
             />
           ) : null}
         </View>
 
         <View style={styles.footer}>
+          <Text style={styles.addressLabel}>선택한 위치</Text>
           <Text style={styles.address} numberOfLines={2}>
             {resolving ? '주소를 확인하는 중...' : address}
           </Text>
+          {error ? <Text style={styles.error}>{error}</Text> : null}
           <Pressable
             style={styles.naverBtn}
             onPress={() =>
@@ -111,24 +168,12 @@ export function LocationMapPicker({
               (resolving || saving) && styles.confirmDisabled,
             ]}
             disabled={resolving || saving}
-            onPress={() => {
-              void (async () => {
-                setSaving(true);
-                try {
-                  const label = resolving
-                    ? await reverseGeocodeAddress(coord.lat, coord.lng)
-                    : address;
-                  onConfirm(coord.lat, coord.lng, label);
-                } finally {
-                  setSaving(false);
-                }
-              })();
-            }}
+            onPress={onPressConfirm}
           >
             {saving ? (
               <ActivityIndicator color="#FFFFFF" />
             ) : (
-              <Text style={styles.confirmText}>이 위치로 설정</Text>
+              <Text style={styles.confirmText}>이 위치로 내 위치 설정</Text>
             )}
           </Pressable>
         </View>
@@ -181,12 +226,26 @@ const styles = StyleSheet.create({
     padding: layout.screenPadding,
     gap: spacing.sm,
   },
+  addressLabel: {
+    fontFamily: fonts.medium,
+    color: colors.textSecondary,
+    fontSize: 13,
+    lineHeight: 20,
+    ...androidFont,
+  },
   address: {
     fontFamily: fonts.medium,
     color: colors.text,
     fontSize: 15,
     lineHeight: 22,
     minHeight: 40,
+    ...androidFont,
+  },
+  error: {
+    fontFamily: fonts.regular,
+    color: colors.danger,
+    fontSize: 13,
+    lineHeight: 18,
     ...androidFont,
   },
   naverBtn: {

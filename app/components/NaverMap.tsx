@@ -46,6 +46,10 @@ interface Props {
    * (지도에서 위치 선택)
    */
   centerPin?: boolean;
+  /** 중앙 핀 라벨 (예: 내 위치) */
+  centerPinLabel?: string;
+  /** 중앙 핀 색 — user=파란 내위치, browse=빨간 탐색 */
+  centerPinTone?: 'user' | 'browse';
   /** 단일 마커 라벨 (markers 미사용·centerPin 아닐 때) */
   label?: string;
   markers?: MapMarker[];
@@ -75,11 +79,12 @@ function buildHtml(
   categoryColors: Record<string, string>,
   categoryImages: Record<string, string>
 ) {
+  // centerPin: 중앙 오버레이 핀 사용. 상점 마커(markers)는 그대로 표시한다.
   const markerPayload = JSON.stringify(
-    centerPin
-      ? []
-      : markers.length > 0
-        ? markers
+    markers.length > 0
+      ? markers
+      : centerPin
+        ? []
         : [{ lat, lng, label: label || '', kind: 'store', category: 'other' }]
   );
 
@@ -304,9 +309,8 @@ function buildHtml(
           mapTypeControl: false
         });
 
-        if (!centerPin) {
-          renderPoints(points);
-        }
+        // centerPin이어도 주변 상점 마커는 표시 (중앙 핀은 RN 오버레이)
+        renderPoints(points);
 
         if (lockCenter || centerPin) {
           map.setCenter(new naver.maps.LatLng(lat, lng));
@@ -371,7 +375,7 @@ function buildHtml(
     }
 
     function setMarkersFromNative(list) {
-      if (!map || centerPin) return;
+      if (!map) return;
       renderPoints(list || []);
     }
 
@@ -402,6 +406,8 @@ export function NaverMap({
   navigable,
   lockCenter = false,
   centerPin = false,
+  centerPinLabel,
+  centerPinTone = 'browse',
   label = '',
   markers,
   style,
@@ -409,6 +415,7 @@ export function NaverMap({
   onCameraIdle,
   onPressMarker,
 }: Props) {
+  const pinColor = centerPinTone === 'user' ? '#2B6CFF' : '#E14C4C';
   const webRef = useRef<WebView>(null);
   const [authFailed, setAuthFailed] = useState(false);
   const [ready, setReady] = useState(false);
@@ -443,17 +450,33 @@ export function NaverMap({
     [interactive, canNavigate, lockCenter, centerPin, zoom, label]
   );
 
-  // 지도 준비 후 / markers 변경 시 판매점·현위치 마커만 갱신
+  // 지도 준비 후 / markers 변경 시 판매점 마커 갱신
+  // markers 미전달(상세 단일 핀)일 때는 lat/lng 폴백 — 빈 배열로 초기 마커를 지우지 않는다
+  // centerPin이어도 주변 상점 markers는 갱신한다
   useEffect(() => {
-    if (!ready || !NCP_KEY_ID || authFailed || centerPin) return;
-    const points = markers ?? [];
+    if (!ready || !NCP_KEY_ID || authFailed) return;
+    const points =
+      markers != null
+        ? markers
+        : centerPin
+          ? []
+          : [{ lat, lng, label: label || '', kind: 'store' as const }];
     const js = `setMarkersFromNative(${JSON.stringify(points)}); true;`;
     webRef.current?.injectJavaScript(js);
-  }, [ready, markerKey, authFailed, centerPin, markers]);
+  }, [
+    ready,
+    markerKey,
+    authFailed,
+    centerPin,
+    markers,
+    lat,
+    lng,
+    label,
+  ]);
 
   useEffect(() => {
     if (!NCP_KEY_ID || authFailed || centerPin) return;
-    if (markers && markers.length > 0) return;
+    if (markers != null) return;
     const js = `setPosition(${lat}, ${lng}); true;`;
     webRef.current?.injectJavaScript(js);
   }, [lat, lng, authFailed, markers, centerPin]);
@@ -545,8 +568,15 @@ export function NaverMap({
       {centerPin ? (
         <View pointerEvents="none" style={styles.centerPinWrap}>
           <View style={styles.centerPin}>
-            <View style={styles.pinHead} />
-            <View style={styles.pinPoint} />
+            {centerPinLabel ? (
+              <View style={styles.centerPinLabelWrap}>
+                <Text style={styles.centerPinLabel}>{centerPinLabel}</Text>
+              </View>
+            ) : null}
+            <View style={[styles.pinHead, { backgroundColor: pinColor }]} />
+            <View
+              style={[styles.pinPoint, { borderTopColor: pinColor }]}
+            />
           </View>
         </View>
       ) : null}
@@ -571,7 +601,21 @@ const styles = StyleSheet.create({
   },
   centerPin: {
     alignItems: 'center',
-    marginTop: -22,
+    // 핀 끝(뾰족한 부분)이 지도 정중앙에 오도록 위로 올림
+    transform: [{ translateY: -18 }],
+  },
+  centerPinLabelWrap: {
+    marginBottom: 6,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 8,
+    backgroundColor: 'rgba(0,0,0,0.78)',
+  },
+  centerPinLabel: {
+    fontFamily: fonts.bold,
+    color: '#FFFFFF',
+    fontSize: 12,
+    lineHeight: 16,
   },
   pinHead: {
     width: 22,

@@ -34,12 +34,8 @@ export default function HomeScreen() {
     }, [])
   );
 
-  const { stores, loading, error, refresh, updateStoreLike } = useNearbyStores(
-    location?.lat,
-    location?.lng,
-    category,
-    dayOfWeek
-  );
+  const { stores, loading, error, refresh, updateStoreLike, updateStoreVerify } =
+    useNearbyStores(location?.lat, location?.lng, category, dayOfWeek);
 
   // 지도: 전체 카테고리 조회 (아이콘 구분용)
   const { stores: mapStoresRaw, refresh: refreshMap } = useNearbyStores(
@@ -113,6 +109,7 @@ export default function HomeScreen() {
         onRefresh={onRefresh}
         onPressStore={(id) => router.push(`/store/${id}`)}
         onLikeChange={updateStoreLike}
+        onVerifyChange={updateStoreVerify}
       />
       <RegisterStoreCard onPress={() => setRegisterOpen(true)} />
       <RegisterStoreSheet

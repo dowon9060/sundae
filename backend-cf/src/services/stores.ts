@@ -12,6 +12,7 @@ import type {
 } from '../types';
 import { haversineMeters, isLocationStale } from './distance';
 import { getLikedStoreIds } from './likes';
+import { getVerifiedStoreIds } from './verifications';
 
 const DAY_LABELS = ['일', '월', '화', '수', '목', '금', '토'];
 
@@ -290,16 +291,14 @@ export async function listNearbyStores(
       today_hours_label,
       is_closed_on_day,
       like_count: Number(row.like_count ?? 0),
+      verify_count: Number(row.verify_count ?? 0),
     });
   }
 
   if (opts.clientId && results.length > 0) {
+    const ids = results.map((r) => r.id);
     try {
-      const likedIds = await getLikedStoreIds(
-        env,
-        opts.clientId,
-        results.map((r) => r.id)
-      );
+      const likedIds = await getLikedStoreIds(env, opts.clientId, ids);
       for (const item of results) {
         item.liked = likedIds.has(item.id);
       }
@@ -314,6 +313,24 @@ export async function listNearbyStores(
       );
       for (const item of results) {
         item.liked = false;
+      }
+    }
+
+    try {
+      const verifiedIds = await getVerifiedStoreIds(env, opts.clientId, ids);
+      for (const item of results) {
+        item.verified = verifiedIds.has(item.id);
+      }
+    } catch (err) {
+      console.error(
+        JSON.stringify({
+          level: 'warn',
+          message: 'verified_lookup_failed',
+          detail: err instanceof Error ? err.message : 'unknown',
+        })
+      );
+      for (const item of results) {
+        item.verified = false;
       }
     }
   }

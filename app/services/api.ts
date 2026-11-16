@@ -60,6 +60,8 @@ export async function fetchNearbyStores(params: {
     ...s,
     like_count: Number(s.like_count ?? 0),
     liked: Boolean(s.liked),
+    verify_count: Number(s.verify_count ?? 0),
+    verified: Boolean(s.verified),
   }));
 }
 
@@ -75,6 +77,20 @@ export async function toggleStoreLike(
       body: JSON.stringify({ client_id: clientId }),
     }
   );
+  return json.data;
+}
+
+export async function verifyStorePresence(
+  storeId: string
+): Promise<{ verified: boolean; verify_count: number; already: boolean }> {
+  const clientId = await getClientId();
+  const json = await request<{
+    data: { verified: boolean; verify_count: number; already: boolean };
+  }>(`/api/stores/${storeId}/verifications`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ client_id: clientId }),
+  });
   return json.data;
 }
 

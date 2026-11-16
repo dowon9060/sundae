@@ -53,6 +53,7 @@ npm start
 |--------|------|------|
 | GET | `/api/stores/nearby?lat&lng&category&radius&day&client_id` | 주변 판매점 (거리순, 기본 5km, 요일·좋아요) |
 | POST | `/api/stores/:id/likes` | 좋아요 토글 (`client_id`) |
+| POST | `/api/stores/:id/verifications` | 현장 인증 (`client_id`, 기기당 1회) |
 | GET | `/api/stores/:id` | 판매점 상세 |
 | GET | `/api/stores/:id/menus` | 메뉴 |
 | GET | `/api/stores/:id/hours` | 요일별 운영시간 |

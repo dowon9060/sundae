@@ -53,6 +53,7 @@ export interface StoreRow {
   business_status: BusinessStatus;
   created_at: string;
   like_count?: number;
+  verify_count?: number;
 }
 
 export interface StoreLocationRow {
@@ -108,4 +109,7 @@ export interface NearbyStoreResult extends StoreRow {
   like_count: number;
   /** client_id가 있을 때만 */
   liked?: boolean;
+  verify_count: number;
+  /** client_id가 있을 때만 */
+  verified?: boolean;
 }

@@ -18,7 +18,7 @@ import {
   layout,
   typography,
 } from '../constants/theme';
-import { toggleStoreLike } from '../services/api';
+import { toggleStoreLike, verifyStorePresence } from '../services/api';
 import {
   businessStatusLabel,
   formatDistance,
@@ -29,9 +29,19 @@ interface Props {
   store: NearbyStore;
   onPress: () => void;
   onLikeChange?: (storeId: string, liked: boolean, likeCount: number) => void;
+  onVerifyChange?: (
+    storeId: string,
+    verified: boolean,
+    verifyCount: number
+  ) => void;
 }
 
-export function StoreCard({ store, onPress, onLikeChange }: Props) {
+export function StoreCard({
+  store,
+  onPress,
+  onLikeChange,
+  onVerifyChange,
+}: Props) {
   const statusLabel = businessStatusLabel(store.business_status);
   const statusColor =
     store.business_status === 'confirmed_open'
@@ -45,11 +55,22 @@ export function StoreCard({ store, onPress, onLikeChange }: Props) {
   const [likeCount, setLikeCount] = useState(Number(store.like_count ?? 0));
   const [liking, setLiking] = useState(false);
   const [likeError, setLikeError] = useState<string | null>(null);
+  const [verified, setVerified] = useState(Boolean(store.verified));
+  const [verifyCount, setVerifyCount] = useState(
+    Number(store.verify_count ?? 0)
+  );
+  const [verifying, setVerifying] = useState(false);
+  const [verifyError, setVerifyError] = useState<string | null>(null);
 
   useEffect(() => {
     setLiked(Boolean(store.liked));
     setLikeCount(Number(store.like_count ?? 0));
   }, [store.id, store.liked, store.like_count]);
+
+  useEffect(() => {
+    setVerified(Boolean(store.verified));
+    setVerifyCount(Number(store.verify_count ?? 0));
+  }, [store.id, store.verified, store.verify_count]);
 
   const onPressLike = async () => {
     if (liking) return;
@@ -80,6 +101,36 @@ export function StoreCard({ store, onPress, onLikeChange }: Props) {
       setLiking(false);
     }
   };
+
+  const onPressVerify = async () => {
+    if (verifying || verified) return;
+    setVerifying(true);
+    setVerifyError(null);
+
+    const prevCount = verifyCount;
+    setVerified(true);
+    setVerifyCount(prevCount + 1);
+
+    try {
+      const result = await verifyStorePresence(store.id);
+      setVerified(result.verified);
+      setVerifyCount(result.verify_count);
+      onVerifyChange?.(store.id, result.verified, result.verify_count);
+    } catch (e) {
+      setVerified(false);
+      setVerifyCount(prevCount);
+      setVerifyError(
+        e instanceof Error
+          ? e.message
+          : '인증을 반영하지 못했습니다. 잠시 후 다시 시도해 주세요.'
+      );
+    } finally {
+      setVerifying(false);
+    }
+  };
+
+  const verifyLabel =
+    verifyCount > 0 ? `인증 ${verifyCount}` : '인증하기';
 
   return (
     <Pressable
@@ -163,6 +214,40 @@ export function StoreCard({ store, onPress, onLikeChange }: Props) {
           {statusLabel}
           {store.location_stale ? ' · 위치 정보 오래됨' : ''}
         </Text>
+        <Pressable
+          style={[
+            styles.verifyBtn,
+            verified && styles.verifyBtnDone,
+            verifying && styles.verifyBtnDisabled,
+          ]}
+          onPress={(e) => {
+            e.stopPropagation?.();
+            void onPressVerify();
+          }}
+          disabled={verifying || verified}
+          accessibilityRole="button"
+          accessibilityLabel={
+            verified ? `인증됨 ${verifyCount}` : '현장 인증하기'
+          }
+        >
+          {verifying ? (
+            <ActivityIndicator size="small" color="#FFFFFF" />
+          ) : (
+            <>
+              <Ionicons
+                name={verified ? 'checkmark-circle' : 'shield-checkmark'}
+                size={14}
+                color="#FFFFFF"
+              />
+              <Text style={styles.verifyBtnText}>{verifyLabel}</Text>
+            </>
+          )}
+        </Pressable>
+        {verifyError ? (
+          <Text style={styles.verifyError} numberOfLines={1}>
+            {verifyError}
+          </Text>
+        ) : null}
       </View>
     </Pressable>
   );
@@ -280,5 +365,37 @@ const styles = StyleSheet.create({
   status: {
     ...typography.status,
     marginTop: 2,
+  },
+  verifyBtn: {
+    marginTop: 8,
+    alignSelf: 'flex-start',
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    backgroundColor: colors.accent,
+    borderRadius: 8,
+    paddingVertical: 7,
+    paddingHorizontal: 12,
+    minHeight: 32,
+  },
+  verifyBtnDone: {
+    backgroundColor: colors.accentMuted,
+  },
+  verifyBtnDisabled: {
+    opacity: 0.85,
+  },
+  verifyBtnText: {
+    fontFamily: fonts.bold,
+    fontSize: 13,
+    lineHeight: fontLine(13),
+    color: '#FFFFFF',
+    ...androidFont,
+  },
+  verifyError: {
+    fontFamily: fonts.regular,
+    fontSize: 11,
+    lineHeight: fontLine(11),
+    color: colors.danger,
+    ...androidFont,
   },
 });

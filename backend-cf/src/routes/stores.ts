@@ -5,6 +5,7 @@ import { createStoreReport, isValidReportReason } from '../services/reports';
 import { REPORT_REASON_LABELS } from '../services/notify';
 import { isValidClientId, toggleStoreLike } from '../services/likes';
 import { getHours, getMenus, getStoreById, listNearbyStores } from '../services/stores';
+import { verifyStore } from '../services/verifications';
 
 const stores = new Hono<{ Bindings: Env }>();
 
@@ -91,6 +92,40 @@ stores.post('/:id/likes', async (c) => {
     );
     return c.json(
       { error: '좋아요를 반영하지 못했습니다. 잠시 후 다시 시도해 주세요.' },
+      500
+    );
+  }
+});
+
+stores.post('/:id/verifications', async (c) => {
+  const id = c.req.param('id');
+  let body: { client_id?: string };
+  try {
+    body = await c.req.json();
+  } catch {
+    return c.json({ error: '요청 본문을 확인할 수 없습니다.' }, 400);
+  }
+
+  if (!isValidClientId(body.client_id)) {
+    return c.json({ error: '클라이언트 식별자가 올바르지 않습니다.' }, 400);
+  }
+
+  try {
+    const data = await verifyStore(c.env, id, body.client_id);
+    return c.json({ data });
+  } catch (err) {
+    if (err instanceof Error && err.message === 'STORE_NOT_FOUND') {
+      return c.json({ error: '판매점을 찾을 수 없습니다.' }, 404);
+    }
+    console.error(
+      JSON.stringify({
+        level: 'error',
+        message: 'store_verify_failed',
+        detail: err instanceof Error ? err.message : 'unknown',
+      })
+    );
+    return c.json(
+      { error: '인증을 반영하지 못했습니다. 잠시 후 다시 시도해 주세요.' },
       500
     );
   }

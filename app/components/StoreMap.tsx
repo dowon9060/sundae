@@ -1,16 +1,39 @@
+import { useMemo } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
+import type { MapStoreCategory } from '../constants/mapMarkerIcons';
 import { colors, fonts, layout, spacing, typography } from '../constants/theme';
-import { NaverMap } from './NaverMap';
+import { NaverMap, type MapMarker } from './NaverMap';
 
 interface Props {
   address: string;
   note?: string | null;
   lat: number;
   lng: number;
+  category?: MapStoreCategory;
   onPress: () => void;
 }
 
-export function StoreMap({ address, note, lat, lng, onPress }: Props) {
+export function StoreMap({
+  address,
+  note,
+  lat,
+  lng,
+  category,
+  onPress,
+}: Props) {
+  const markers = useMemo<MapMarker[]>(
+    () => [
+      {
+        lat,
+        lng,
+        label: note || address,
+        kind: 'store',
+        category: category || 'other',
+      },
+    ],
+    [lat, lng, note, address, category]
+  );
+
   return (
     <View style={styles.section}>
       <Text style={styles.title}>판매 위치</Text>
@@ -19,7 +42,8 @@ export function StoreMap({ address, note, lat, lng, onPress }: Props) {
           lat={lat}
           lng={lng}
           zoom={15}
-          label={note || address}
+          lockCenter
+          markers={markers}
           style={styles.mapView}
         />
         <Pressable style={styles.hit} onPress={onPress}>

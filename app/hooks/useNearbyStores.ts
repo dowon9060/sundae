@@ -107,10 +107,23 @@ export function useNearbyStores(
     []
   );
 
+  const updateStoreVerify = useCallback(
+    (storeId: string, verified: boolean, verifyCount: number) => {
+      setStores((prev) =>
+        prev.map((s) =>
+          s.id === storeId
+            ? { ...s, verified, verify_count: verifyCount }
+            : s
+        )
+      );
+    },
+    []
+  );
+
   useEffect(() => {
     if (!enabled) return;
     void refresh();
   }, [refresh, enabled]);
 
-  return { stores, loading, error, refresh, updateStoreLike };
+  return { stores, loading, error, refresh, updateStoreLike, updateStoreVerify };
 }
