@@ -43,6 +43,8 @@ const CATEGORIES = new Set([
   'mandu',
   'takoyaki',
   'chicken',
+  'gopchang',
+  'hotteok',
   'other',
 ]);
 const STATUSES = new Set(['active', 'inactive']);

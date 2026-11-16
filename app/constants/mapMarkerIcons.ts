@@ -13,6 +13,8 @@ export const CATEGORY_MARKER_COLORS: Record<MapStoreCategory, string> = {
   mandu: '#C9A227',
   takoyaki: '#8B5A2B',
   chicken: '#E67E22',
+  gopchang: '#A0522D',
+  hotteok: '#CD853F',
   other: '#2FBF5B',
 };
 
@@ -24,6 +26,8 @@ export const CATEGORY_MARKER_EMOJI: Record<MapStoreCategory, string> = {
   mandu: '🥟',
   takoyaki: '🐙',
   chicken: '🍗',
+  gopchang: '🥩',
+  hotteok: '🥞',
   other: '',
 };
 
@@ -39,6 +43,8 @@ export function resolveMarkerCategory(
     case 'mandu':
     case 'takoyaki':
     case 'chicken':
+    case 'gopchang':
+    case 'hotteok':
     case 'other':
       return category;
     default:

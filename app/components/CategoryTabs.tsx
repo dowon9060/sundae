@@ -10,6 +10,8 @@ const TABS: { key: StoreCategory; label: string }[] = [
   { key: 'mandu', label: CATEGORY_LABELS.mandu },
   { key: 'takoyaki', label: CATEGORY_LABELS.takoyaki },
   { key: 'chicken', label: CATEGORY_LABELS.chicken },
+  { key: 'gopchang', label: CATEGORY_LABELS.gopchang },
+  { key: 'hotteok', label: CATEGORY_LABELS.hotteok },
   { key: 'other', label: CATEGORY_LABELS.other },
 ];
 

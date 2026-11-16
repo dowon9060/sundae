@@ -16,6 +16,8 @@ const STORE_CATEGORIES = new Set<StoreCategory>([
   'mandu',
   'takoyaki',
   'chicken',
+  'gopchang',
+  'hotteok',
   'other',
 ]);
 
