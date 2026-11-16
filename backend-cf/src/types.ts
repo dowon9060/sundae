@@ -1,4 +1,11 @@
-export type StoreCategory = 'sundae' | 'chicken' | 'other' | 'bungeoppang';
+export type StoreCategory =
+  | 'sundae'
+  | 'bungeoppang'
+  | 'dakkochi'
+  | 'mandu'
+  | 'takoyaki'
+  | 'chicken'
+  | 'other';
 export type BusinessStatus = 'expected' | 'confirmed_open' | 'unknown';
 export type StoreStatus = 'active' | 'inactive';
 

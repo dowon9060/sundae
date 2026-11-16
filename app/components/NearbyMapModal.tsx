@@ -18,6 +18,7 @@ import {
   typography,
 } from '../constants/theme';
 import { fetchNearbyStores } from '../services/api';
+import { resolveMarkerCategory } from '../constants/mapMarkerIcons';
 import type { NearbyStore, StoreCategory } from '../types/store';
 import { MapStoreSheet } from './MapStoreSheet';
 import { NaverMap, type MapMarker } from './NaverMap';
@@ -38,11 +39,11 @@ const RADIUS_M = 5000;
 
 export function NearbyMapModal({
   visible,
-  title = '기타 지도',
+  title = '주변 지도',
   stores: initialStores,
   centerLat,
   centerLng,
-  category = 'other',
+  category = 'all',
   dayOfWeek,
   onClose,
 }: Props) {
@@ -67,6 +68,7 @@ export function NearbyMapModal({
       lng: s.lng,
       label: s.name,
       kind: 'store' as const,
+      category: resolveMarkerCategory(s.category),
     }));
     return [
       {

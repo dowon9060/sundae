@@ -1,4 +1,12 @@
-export type StoreCategory = 'sundae' | 'chicken' | 'bungeoppang' | 'other' | 'all';
+export type StoreCategory =
+  | 'sundae'
+  | 'bungeoppang'
+  | 'dakkochi'
+  | 'mandu'
+  | 'takoyaki'
+  | 'chicken'
+  | 'other'
+  | 'all';
 export type BusinessStatus = 'expected' | 'confirmed_open' | 'unknown';
 
 export interface SavedLocation {
@@ -66,8 +74,11 @@ export interface LocationSearchResult {
 
 export const CATEGORY_LABELS: Record<Exclude<StoreCategory, 'all'>, string> = {
   sundae: '순대차',
-  chicken: '통닭',
   bungeoppang: '붕어빵',
+  dakkochi: '닭꼬치',
+  mandu: '만두',
+  takoyaki: '타코야키',
+  chicken: '치킨',
   other: '기타',
 };
 
@@ -78,11 +89,11 @@ export function formatDistance(meters: number): string {
 
 export function businessStatusLabel(status: BusinessStatus): string {
   switch (status) {
-    case 'confirmed_open':
-      return '영업 중';
     case 'expected':
-      return '영업 예상';
+      return '오늘 예상';
+    case 'confirmed_open':
+      return '영업 확인';
     default:
-      return '영업시간 미확인';
+      return '정보 없음';
   }
 }

@@ -197,7 +197,7 @@ export default function StoreDetailScreen() {
         <View style={styles.info}>
           <Text style={styles.name}>{store.name}</Text>
           <Text style={styles.meta}>
-            {CATEGORY_LABELS[store.category]} ·{' '}
+            {CATEGORY_LABELS[store.category] ?? '기타'} ·{' '}
             {store.location_note || store.address}
           </Text>
           {store.distance_m != null ? (

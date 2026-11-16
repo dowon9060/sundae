@@ -2,21 +2,23 @@ import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { colors, layout, spacing, typography } from '../constants/theme';
 import type { StoreCategory } from '../types/store';
 
-const TABS: { key: StoreCategory; label: string }[] = [
+const TABS: { key: Exclude<StoreCategory, 'all'>; label: string }[] = [
   { key: 'sundae', label: '순대차' },
-  { key: 'chicken', label: '통닭' },
   { key: 'bungeoppang', label: '붕어빵' },
-  { key: 'other', label: '기타' },
+  { key: 'dakkochi', label: '닭꼬치' },
+  { key: 'mandu', label: '만두' },
+  { key: 'takoyaki', label: '타코야키' },
+  { key: 'chicken', label: '치킨' },
 ];
 
 interface Props {
   value: StoreCategory;
   onChange: (value: StoreCategory) => void;
-  /** 기타(타코야끼·호떡·곱창·회 등) 지도 */
-  onPressOtherMap?: () => void;
+  /** 주변 푸드트럭 지도 */
+  onPressMap?: () => void;
 }
 
-export function CategoryTabs({ value, onChange, onPressOtherMap }: Props) {
+export function CategoryTabs({ value, onChange, onPressMap }: Props) {
   return (
     <View style={styles.wrap}>
       <ScrollView
@@ -25,34 +27,33 @@ export function CategoryTabs({ value, onChange, onPressOtherMap }: Props) {
         style={styles.scroll}
         contentContainerStyle={styles.row}
       >
+        {onPressMap ? (
+          <Pressable style={styles.mapChip} onPress={onPressMap}>
+            <Text
+              style={styles.mapChipLabel}
+              allowFontScaling
+              maxFontSizeMultiplier={1.35}
+            >
+              지도로 보기
+            </Text>
+          </Pressable>
+        ) : null}
         {TABS.map((tab) => {
           const active = value === 'all' ? false : tab.key === value;
           return (
-            <View key={tab.key} style={styles.tabGroup}>
-              <Pressable
-                style={[styles.chip, active && styles.chipActive]}
-                onPress={() => onChange(value === tab.key ? 'all' : tab.key)}
+            <Pressable
+              key={tab.key}
+              style={[styles.chip, active && styles.chipActive]}
+              onPress={() => onChange(value === tab.key ? 'all' : tab.key)}
+            >
+              <Text
+                style={[styles.label, active && styles.labelActive]}
+                allowFontScaling
+                maxFontSizeMultiplier={1.35}
               >
-                <Text
-                  style={[styles.label, active && styles.labelActive]}
-                  allowFontScaling
-                  maxFontSizeMultiplier={1.35}
-                >
-                  {tab.label}
-                </Text>
-              </Pressable>
-              {tab.key === 'other' && onPressOtherMap ? (
-                <Pressable style={styles.mapChip} onPress={onPressOtherMap}>
-                  <Text
-                    style={styles.mapChipLabel}
-                    allowFontScaling
-                    maxFontSizeMultiplier={1.35}
-                  >
-                    지도로 보기
-                  </Text>
-                </Pressable>
-              ) : null}
-            </View>
+                {tab.label}
+              </Text>
+            </Pressable>
           );
         })}
       </ScrollView>
@@ -73,11 +74,6 @@ const styles = StyleSheet.create({
     gap: 8,
     paddingBottom: spacing.md,
     alignItems: 'center',
-  },
-  tabGroup: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
   },
   chip: {
     minHeight: layout.chipHeight,

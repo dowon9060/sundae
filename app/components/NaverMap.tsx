@@ -7,7 +7,12 @@ import {
   type ViewStyle,
 } from 'react-native';
 import { WebView, type WebViewMessageEvent } from 'react-native-webview';
-import { FOOD_TRUCK_MARKER_DATA_URI } from '../constants/foodTruckMarkerData';
+import {
+  CATEGORY_MARKER_COLORS,
+  CATEGORY_MARKER_EMOJI,
+  DEFAULT_TRUCK_MARKER_URI,
+  type MapStoreCategory,
+} from '../constants/mapMarkerIcons';
 import { colors, fonts } from '../constants/theme';
 
 export interface MapMarker {
@@ -16,6 +21,8 @@ export interface MapMarker {
   label?: string;
   /** user=현위치(일반 핀), store=판매점(푸드트럭) */
   kind?: 'user' | 'store';
+  /** store 마커일 때 카테고리별 아이콘 */
+  category?: MapStoreCategory;
 }
 
 interface Props {
@@ -62,14 +69,16 @@ function buildHtml(
   centerPin: boolean,
   label: string,
   markers: MapMarker[],
-  markerIconUri: string
+  markerIconUri: string,
+  categoryEmoji: Record<string, string>,
+  categoryColors: Record<string, string>
 ) {
   const markerPayload = JSON.stringify(
     centerPin
       ? []
       : markers.length > 0
         ? markers
-        : [{ lat, lng, label: label || '', kind: 'store' }]
+        : [{ lat, lng, label: label || '', kind: 'store', category: 'other' }]
   );
 
   return `<!DOCTYPE html>
@@ -118,6 +127,8 @@ function buildHtml(
     var centerPin = ${centerPin ? 'true' : 'false'};
     var points = ${markerPayload};
     var truckIconUri = ${JSON.stringify(markerIconUri)};
+    var categoryEmoji = ${JSON.stringify(categoryEmoji)};
+    var categoryColors = ${JSON.stringify(categoryColors)};
     var map = null;
     var marker = null;
     var markers = [];
@@ -160,17 +171,32 @@ function buildHtml(
       };
     }
 
-    function pinIcon(text) {
+    function pinIcon(text, category) {
+      var cat = category || 'other';
+      var emoji = categoryEmoji[cat] || '';
+      var border = categoryColors[cat] || '#2FBF5B';
       var label = text
         ? '<div style="margin-top:3px;max-width:110px;padding:3px 7px;border-radius:8px;background:#fff;color:#111;font:600 11px/1.2 sans-serif;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;box-shadow:0 2px 8px rgba(0,0,0,.14);">' +
           escapeHtml(text) +
           '</div>'
         : '';
+      var badge;
+      if (emoji) {
+        badge =
+          '<div style="width:48px;height:48px;border-radius:14px;margin:0 auto;background:#fff;' +
+          'border:2px solid ' + border + ';box-shadow:0 3px 10px rgba(0,0,0,.28);' +
+          'font-size:26px;line-height:48px;text-align:center;">' +
+          emoji +
+          '</div>';
+      } else {
+        badge =
+          '<img src="' + truckIconUri + '" width="52" height="52" alt="" ' +
+          'style="width:52px;height:52px;border-radius:14px;display:block;margin:0 auto;' +
+          'box-shadow:0 3px 10px rgba(0,0,0,.28);border:2px solid ' + border + ';background:#fff;" />';
+      }
       var html =
         '<div style="width:56px;text-align:center;">' +
-        '<img src="' + truckIconUri + '" width="52" height="52" alt="" ' +
-        'style="width:52px;height:52px;border-radius:14px;display:block;margin:0 auto;' +
-        'box-shadow:0 3px 10px rgba(0,0,0,.28);border:2px solid #2FBF5B;background:#fff;" />' +
+        badge +
         label +
         '</div>';
       return {
@@ -193,7 +219,7 @@ function buildHtml(
       var isUser = p.kind === 'user';
       var icon = isUser
         ? locationPinIcon(p.label || '현위치', '#2B6CFF')
-        : pinIcon(p.label || '');
+        : pinIcon(p.label || '', p.category || 'other');
       var m;
       try {
         m = new naver.maps.Marker({
@@ -394,7 +420,9 @@ export function NaverMap({
             centerPin,
             label,
             markers ?? [],
-            FOOD_TRUCK_MARKER_DATA_URI
+            DEFAULT_TRUCK_MARKER_URI,
+            CATEGORY_MARKER_EMOJI,
+            CATEGORY_MARKER_COLORS
           )
         : '',
     // 초기 HTML만 — 이후 마커는 inject 로 갱신 (카메라 유지)

@@ -23,7 +23,7 @@ export default function HomeScreen() {
   const [dayOfWeek, setDayOfWeek] = useState(getTodayDayOfWeek);
   const [refreshing, setRefreshing] = useState(false);
   const [registerOpen, setRegisterOpen] = useState(false);
-  const [otherMapOpen, setOtherMapOpen] = useState(false);
+  const [mapOpen, setMapOpen] = useState(false);
   const { tryRefresh, hint } = useRefreshGate(10_000);
 
   // 홈 복귀 시 오늘(서울) 요일만 맞춤 (값이 같으면 상태 유지 → 불필요 재요청 방지)
@@ -41,20 +41,20 @@ export default function HomeScreen() {
     dayOfWeek
   );
 
-  // 지도 열리면 기타(other) 목록을 별도 조회 (카테고리 전환 레이스 방지)
-  const { stores: otherMapStores, refresh: refreshOtherMap } = useNearbyStores(
+  // 지도: 전체 카테고리 조회 (아이콘 구분용)
+  const { stores: mapStoresRaw, refresh: refreshMap } = useNearbyStores(
     location?.lat,
     location?.lng,
-    'other',
+    'all',
     dayOfWeek,
-    otherMapOpen
+    mapOpen
   );
 
   const mapStores = useMemo(() => {
-    if (category === 'other' && stores.length > 0) return stores;
-    if (otherMapStores.length > 0) return otherMapStores;
-    return category === 'other' ? stores : otherMapStores;
-  }, [category, stores, otherMapStores]);
+    if (mapStoresRaw.length > 0) return mapStoresRaw;
+    if (category === 'all') return stores;
+    return mapStoresRaw;
+  }, [category, stores, mapStoresRaw]);
 
   const listMessage = hint || error;
 
@@ -66,14 +66,14 @@ export default function HomeScreen() {
         setDayOfWeek((prev) => (prev === today ? prev : today));
         await refreshGps();
         await refresh({ force: true });
-        if (otherMapOpen) {
-          await refreshOtherMap({ force: true });
+        if (mapOpen) {
+          await refreshMap({ force: true });
         }
       } finally {
         setRefreshing(false);
       }
     });
-  }, [tryRefresh, refreshGps, refresh, refreshOtherMap, otherMapOpen]);
+  }, [tryRefresh, refreshGps, refresh, refreshMap, mapOpen]);
 
   const onPressGps = useCallback(() => {
     void tryRefresh(async () => {
@@ -100,10 +100,7 @@ export default function HomeScreen() {
       <CategoryTabs
         value={category}
         onChange={setCategory}
-        onPressOtherMap={() => {
-          setOtherMapOpen(true);
-          setCategory('other');
-        }}
+        onPressMap={() => setMapOpen(true)}
       />
       <StoreList
         stores={stores}
@@ -127,14 +124,14 @@ export default function HomeScreen() {
       />
       {location ? (
         <NearbyMapModal
-          visible={otherMapOpen}
-          title="기타 지도"
+          visible={mapOpen}
+          title="주변 지도"
           stores={mapStores}
           centerLat={location.lat}
           centerLng={location.lng}
-          category="other"
+          category="all"
           dayOfWeek={dayOfWeek}
-          onClose={() => setOtherMapOpen(false)}
+          onClose={() => setMapOpen(false)}
         />
       ) : null}
     </SafeAreaView>
@@ -148,9 +145,9 @@ const styles = StyleSheet.create({
   },
   hint: {
     fontFamily: fonts.regular,
+    fontSize: 13,
     color: colors.textSecondary,
-    fontSize: 12,
-    paddingHorizontal: spacing.md,
-    paddingBottom: spacing.sm,
+    paddingHorizontal: spacing.lg,
+    marginBottom: spacing.sm,
   },
 });
