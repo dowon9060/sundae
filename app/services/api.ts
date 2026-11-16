@@ -160,6 +160,7 @@ export async function submitStoreReport(
 
 export interface StoreRegistrationPayload {
   name: string;
+  category: Exclude<StoreCategory, 'all'>;
   menu: string;
   today_hours: string;
   location_text: string;

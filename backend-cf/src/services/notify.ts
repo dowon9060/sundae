@@ -91,6 +91,7 @@ export async function notifyStoreReport(
 export interface RegistrationNotifyPayload {
   requestId: string;
   name: string;
+  category: string;
   menu: string;
   todayHours: string;
   locationText: string;
@@ -121,6 +122,7 @@ export async function notifyStoreRegistration(
   const text = [
     '[순대차 등록 요청]',
     `이름: ${payload.name}`,
+    `카테고리: ${payload.category}`,
     `메뉴: ${payload.menu}`,
     `오늘 운영: ${payload.todayHours}`,
     `위치: ${payload.locationText}`,

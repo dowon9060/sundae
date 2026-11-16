@@ -13,6 +13,7 @@ const REG_ERROR_MESSAGES: Record<string, string> = {
   EMPTY_MENU: '메뉴를 입력해 주세요.',
   EMPTY_TODAY_HOURS: '오늘 운영 시간을 입력해 주세요.',
   EMPTY_LOCATION: '위치를 입력해 주세요.',
+  INVALID_CATEGORY: '카테고리를 선택해 주세요.',
   INVALID_NAME: '이름 형식이 올바르지 않습니다.',
   INVALID_MENU: '메뉴 형식이 올바르지 않습니다.',
   INVALID_TODAY_HOURS: '오늘 운영 시간 형식이 올바르지 않습니다.',
@@ -106,6 +107,7 @@ stores.post('/registration-requests', async (c) => {
   try {
     const data = await createStoreRegistration(c.env, {
       name: body.name as string,
+      category: body.category as StoreCategory,
       menu: body.menu as string,
       today_hours: body.today_hours as string,
       location_text: body.location_text as string,
@@ -121,6 +123,7 @@ stores.post('/registration-requests', async (c) => {
         data: {
           id: data.id,
           name: data.name,
+          category: data.category,
           status: data.status,
           created_at: data.created_at,
           has_photo_menu: Boolean(data.has_photo_menu),

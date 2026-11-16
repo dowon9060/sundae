@@ -18,6 +18,7 @@ import * as ImagePicker from 'expo-image-picker';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { colors, fonts, layout, spacing, typography } from '../constants/theme';
 import { submitStoreRegistration } from '../services/api';
+import { CATEGORY_LABELS, type StoreCategory } from '../types/store';
 
 type PhotoKey = 'menu' | 'location' | 'truck';
 
@@ -40,6 +41,16 @@ const PHOTO_LABELS: Record<PhotoKey, string> = {
   truck: '푸드트럭',
 };
 
+const CATEGORY_KEYS: Exclude<StoreCategory, 'all'>[] = [
+  'sundae',
+  'bungeoppang',
+  'dakkochi',
+  'mandu',
+  'takoyaki',
+  'chicken',
+  'other',
+];
+
 async function toCompressedDataUrl(uri: string): Promise<string> {
   const manipulated = await ImageManipulator.manipulateAsync(
     uri,
@@ -60,6 +71,8 @@ export function RegisterStoreSheet({
   onClose,
 }: Props) {
   const [name, setName] = useState('');
+  const [category, setCategory] =
+    useState<Exclude<StoreCategory, 'all'>>('sundae');
   const [menu, setMenu] = useState('');
   const [todayHours, setTodayHours] = useState('');
   const [locationText, setLocationText] = useState('');
@@ -73,6 +86,7 @@ export function RegisterStoreSheet({
   useEffect(() => {
     if (!visible) return;
     setName('');
+    setCategory('sundae');
     setMenu('');
     setTodayHours('');
     setLocationText(defaultLocation);
@@ -161,6 +175,10 @@ export function RegisterStoreSheet({
       setError('이름을 입력해 주세요.');
       return;
     }
+    if (!category) {
+      setError('카테고리를 선택해 주세요.');
+      return;
+    }
     if (!menu.trim()) {
       setError('메뉴를 입력해 주세요.');
       return;
@@ -179,6 +197,7 @@ export function RegisterStoreSheet({
     try {
       const result = await submitStoreRegistration({
         name: name.trim(),
+        category,
         menu: menu.trim(),
         today_hours: todayHours.trim(),
         location_text: locationText.trim(),
@@ -234,6 +253,30 @@ export function RegisterStoreSheet({
                   placeholder="예: 역삼 순대차"
                   placeholderTextColor={colors.textMuted}
                 />
+              </Field>
+
+              <Field label="카테고리">
+                <View style={styles.categoryRow}>
+                  {CATEGORY_KEYS.map((key) => {
+                    const active = category === key;
+                    return (
+                      <Pressable
+                        key={key}
+                        style={[styles.categoryChip, active && styles.categoryChipActive]}
+                        onPress={() => setCategory(key)}
+                      >
+                        <Text
+                          style={[
+                            styles.categoryChipText,
+                            active && styles.categoryChipTextActive,
+                          ]}
+                        >
+                          {CATEGORY_LABELS[key]}
+                        </Text>
+                      </Pressable>
+                    );
+                  })}
+                </View>
               </Field>
 
               <Field label="메뉴">

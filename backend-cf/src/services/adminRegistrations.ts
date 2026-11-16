@@ -26,7 +26,7 @@ export async function listRegistrationRequests(
 
   const rows = await env.DB.prepare(
     `SELECT
-      id, name, menu, today_hours, location_text, lat, lng,
+      id, name, category, menu, today_hours, location_text, lat, lng,
       CASE WHEN photo_menu IS NOT NULL THEN 1 ELSE 0 END AS has_photo_menu,
       CASE WHEN photo_location IS NOT NULL THEN 1 ELSE 0 END AS has_photo_location,
       CASE WHEN photo_truck IS NOT NULL THEN 1 ELSE 0 END AS has_photo_truck,
@@ -40,6 +40,7 @@ export async function listRegistrationRequests(
     .all<{
       id: string;
       name: string;
+      category: string | null;
       menu: string;
       today_hours: string;
       location_text: string;

@@ -1,4 +1,4 @@
-import type { Env } from '../types';
+import type { Env, StoreCategory } from '../types';
 import { notifyStoreRegistration } from './notify';
 
 /** base64 data URL 기준 대략 150KB 이미지 */
@@ -9,8 +9,19 @@ const MAX_TODAY_HOURS = 80;
 const MAX_LOCATION = 200;
 const DATA_IMAGE_RE = /^data:image\/(jpeg|jpg|png|webp);base64,[A-Za-z0-9+/=\s]+$/i;
 
+const STORE_CATEGORIES = new Set<StoreCategory>([
+  'sundae',
+  'bungeoppang',
+  'dakkochi',
+  'mandu',
+  'takoyaki',
+  'chicken',
+  'other',
+]);
+
 export interface RegistrationInput {
   name: string;
+  category: StoreCategory;
   menu: string;
   today_hours: string;
   location_text: string;
@@ -69,6 +80,10 @@ export async function createStoreRegistration(
   raw: RegistrationInput
 ) {
   const name = trimRequired(raw.name, 'NAME', MAX_NAME);
+  if (typeof raw.category !== 'string' || !STORE_CATEGORIES.has(raw.category as StoreCategory)) {
+    throw new Error('INVALID_CATEGORY');
+  }
+  const category = raw.category as StoreCategory;
   const menu = trimRequired(raw.menu, 'MENU', MAX_MENU);
   const today_hours = trimRequired(raw.today_hours, 'TODAY_HOURS', MAX_TODAY_HOURS);
   const location_text = trimRequired(raw.location_text, 'LOCATION', MAX_LOCATION);
@@ -95,13 +110,14 @@ export async function createStoreRegistration(
 
   await env.DB.prepare(
     `INSERT INTO store_registration_requests (
-      id, name, menu, today_hours, location_text, lat, lng,
+      id, name, category, menu, today_hours, location_text, lat, lng,
       photo_menu, photo_location, photo_truck, status, created_at
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending', datetime('now'))`
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending', datetime('now'))`
   )
     .bind(
       id,
       name,
+      category,
       menu,
       today_hours,
       location_text,
@@ -114,7 +130,7 @@ export async function createStoreRegistration(
     .run();
 
   const row = await env.DB.prepare(
-    `SELECT id, name, menu, today_hours, location_text, lat, lng,
+    `SELECT id, name, category, menu, today_hours, location_text, lat, lng,
             CASE WHEN photo_menu IS NOT NULL THEN 1 ELSE 0 END AS has_photo_menu,
             CASE WHEN photo_location IS NOT NULL THEN 1 ELSE 0 END AS has_photo_location,
             CASE WHEN photo_truck IS NOT NULL THEN 1 ELSE 0 END AS has_photo_truck,
@@ -125,6 +141,7 @@ export async function createStoreRegistration(
     .first<{
       id: string;
       name: string;
+      category: StoreCategory;
       menu: string;
       today_hours: string;
       location_text: string;
@@ -145,6 +162,7 @@ export async function createStoreRegistration(
   const notify = await notifyStoreRegistration(env, {
     requestId: row.id,
     name: row.name,
+    category: row.category,
     menu: row.menu,
     todayHours: row.today_hours,
     locationText: row.location_text,
