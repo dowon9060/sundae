@@ -1,5 +1,23 @@
--- 카테고리 추가: 회/오징어회 (hoe)
+-- 카테고리 추가: gopchang / hotteok / hoe
+-- D1은 PRAGMA foreign_keys=OFF 를 무시할 수 있어, DROP 전 자식 테이블을 백업한다.
+
 PRAGMA foreign_keys = OFF;
+
+CREATE TABLE IF NOT EXISTS _bak_store_locations AS SELECT * FROM store_locations WHERE 0;
+DELETE FROM _bak_store_locations;
+INSERT INTO _bak_store_locations SELECT * FROM store_locations;
+
+CREATE TABLE IF NOT EXISTS _bak_business_hours AS SELECT * FROM business_hours WHERE 0;
+DELETE FROM _bak_business_hours;
+INSERT INTO _bak_business_hours SELECT * FROM business_hours;
+
+CREATE TABLE IF NOT EXISTS _bak_menus AS SELECT * FROM menus WHERE 0;
+DELETE FROM _bak_menus;
+INSERT INTO _bak_menus SELECT * FROM menus;
+
+CREATE TABLE IF NOT EXISTS _bak_store_likes AS SELECT * FROM store_likes WHERE 0;
+DELETE FROM _bak_store_likes;
+INSERT INTO _bak_store_likes SELECT * FROM store_likes;
 
 CREATE TABLE stores_new (
   id TEXT PRIMARY KEY,
@@ -50,6 +68,35 @@ DROP TABLE stores;
 ALTER TABLE stores_new RENAME TO stores;
 CREATE INDEX IF NOT EXISTS idx_stores_category ON stores(category);
 
+-- 자식 데이터 복구 (CASCADE 유실 대비)
+INSERT OR IGNORE INTO store_locations SELECT * FROM _bak_store_locations;
+INSERT OR IGNORE INTO business_hours SELECT * FROM _bak_business_hours;
+INSERT OR IGNORE INTO menus SELECT * FROM _bak_menus;
+INSERT OR IGNORE INTO store_likes SELECT * FROM _bak_store_likes;
+
+DROP TABLE IF EXISTS _bak_store_locations;
+DROP TABLE IF EXISTS _bak_business_hours;
+DROP TABLE IF EXISTS _bak_menus;
+DROP TABLE IF EXISTS _bak_store_likes;
+
+-- 기타 → 호떡
+UPDATE stores
+SET category = 'hotteok'
+WHERE category = 'other'
+  AND (
+    name LIKE '%호떡%'
+    OR COALESCE(description, '') LIKE '%호떡%'
+  );
+
+-- 기타 → 곱창
+UPDATE stores
+SET category = 'gopchang'
+WHERE category = 'other'
+  AND (
+    name LIKE '%곱창%'
+    OR COALESCE(description, '') LIKE '%곱창%'
+  );
+
 -- 기타 → 회(오징어회·낙지회·회트럭)
 UPDATE stores
 SET category = 'hoe'
@@ -60,6 +107,7 @@ WHERE category = 'other'
     OR name LIKE '%회트럭%'
     OR name LIKE '% 회'
     OR name LIKE '%회 '
+    OR id LIKE 'store-hoe-%'
     OR COALESCE(description, '') LIKE '%오징어회%'
     OR COALESCE(description, '') LIKE '%낙지회%'
   );
