@@ -5,6 +5,7 @@ import { clearRateLimitBuckets, rateLimit } from './middleware/rateLimit';
 import stores from './routes/stores';
 import locations from './routes/locations';
 import admin from './routes/admin';
+import adminAuth from './routes/adminAuth';
 
 const app = new Hono<{ Bindings: Env }>();
 
@@ -17,7 +18,7 @@ app.use(
   cors({
     origin: '*',
     allowMethods: ['GET', 'POST', 'PATCH', 'OPTIONS'],
-    allowHeaders: ['Content-Type', 'X-Admin-Key'],
+    allowHeaders: ['Content-Type', 'X-Admin-Key', 'X-Admin-Email'],
     exposeHeaders: ['Retry-After', 'X-RateLimit-Limit'],
   })
 );
@@ -46,6 +47,10 @@ app.use('/api/*', rateLimit({ name: 'api', windowMs: 60_000, max: 60 }));
 
 /** 등록·제보·좋아요: D1 durable 추가 제한 */
 app.use(
+  '/api/admin/auth/login',
+  rateLimit({ name: 'admin-login', windowMs: 60_000, max: 10, durable: true })
+);
+app.use(
   '/api/stores/registration-requests',
   rateLimit({ name: 'register', windowMs: 60_000, max: 5, durable: true })
 );
@@ -60,6 +65,7 @@ app.use(
 
 app.route('/api/stores', stores);
 app.route('/api/locations', locations);
+app.route('/api/admin/auth', adminAuth);
 app.route('/api/admin', admin);
 
 app.notFound((c) => c.json({ error: 'Not found' }, 404));

@@ -2,6 +2,11 @@ import { Hono } from 'hono';
 import type { BusinessStatus, Env, StoreCategory, StoreStatus } from '../types';
 import { listRegistrationRequests } from '../services/adminRegistrations';
 import {
+  getAdminPublicByEmail,
+  isValidEmail,
+  updateAdminProfile,
+} from '../services/admins';
+import {
   createStore,
   getAdminStoreDetail,
   getStoreById,
@@ -67,6 +72,45 @@ admin.use('*', async (c, next) => {
   }
   await next();
 });
+
+admin.get('/me', async (c) => {
+  const email = (c.req.header('X-Admin-Email') || '').trim();
+  if (!email || !isValidEmail(email)) {
+    return c.json({ error: '관리자 이메일이 필요합니다.' }, 400);
+  }
+  const data = await getAdminPublicByEmail(c.env, email);
+  if (!data) {
+    return c.json({ error: '관리자를 찾을 수 없습니다.' }, 404);
+  }
+  return c.json({ data });
+});
+
+admin.patch('/me', async (c) => {
+  const email = (c.req.header('X-Admin-Email') || '').trim();
+  if (!email || !isValidEmail(email)) {
+    return c.json({ error: '관리자 이메일이 필요합니다.' }, 400);
+  }
+
+  const body = await c.req.json<{
+    name?: string;
+    email?: string;
+    currentPassword?: string;
+    newPassword?: string;
+  }>();
+
+  const result = await updateAdminProfile(c.env, email, {
+    name: body.name,
+    email: body.email,
+    currentPassword: body.currentPassword,
+    newPassword: body.newPassword,
+  });
+
+  if ('error' in result) {
+    return c.json({ error: result.error }, result.status as 400 | 401 | 404 | 409 | 500);
+  }
+  return c.json({ data: result.admin });
+});
+
 
 admin.get('/regions', async (c) => {
   const data = await listRegionsWithCounts(c.env);
