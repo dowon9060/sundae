@@ -23,7 +23,7 @@ export default function HomeScreen() {
   const [dayOfWeek, setDayOfWeek] = useState(getTodayDayOfWeek);
   const [refreshing, setRefreshing] = useState(false);
   const [registerOpen, setRegisterOpen] = useState(false);
-  const [takoyakiMapOpen, setTakoyakiMapOpen] = useState(false);
+  const [otherMapOpen, setOtherMapOpen] = useState(false);
   const { tryRefresh, hint } = useRefreshGate(10_000);
 
   // 홈 복귀 시 오늘(서울) 요일만 맞춤 (값이 같으면 상태 유지 → 불필요 재요청 방지)
@@ -41,20 +41,20 @@ export default function HomeScreen() {
     dayOfWeek
   );
 
-  // 지도 열리면 타코야끼(other) 목록을 별도 조회 (카테고리 전환 레이스 방지)
-  const { stores: takoyakiStores, refresh: refreshTakoyaki } = useNearbyStores(
+  // 지도 열리면 기타(other) 목록을 별도 조회 (카테고리 전환 레이스 방지)
+  const { stores: otherMapStores, refresh: refreshOtherMap } = useNearbyStores(
     location?.lat,
     location?.lng,
     'other',
     dayOfWeek,
-    takoyakiMapOpen
+    otherMapOpen
   );
 
   const mapStores = useMemo(() => {
     if (category === 'other' && stores.length > 0) return stores;
-    if (takoyakiStores.length > 0) return takoyakiStores;
-    return category === 'other' ? stores : takoyakiStores;
-  }, [category, stores, takoyakiStores]);
+    if (otherMapStores.length > 0) return otherMapStores;
+    return category === 'other' ? stores : otherMapStores;
+  }, [category, stores, otherMapStores]);
 
   const listMessage = hint || error;
 
@@ -66,14 +66,14 @@ export default function HomeScreen() {
         setDayOfWeek((prev) => (prev === today ? prev : today));
         await refreshGps();
         await refresh({ force: true });
-        if (takoyakiMapOpen) {
-          await refreshTakoyaki({ force: true });
+        if (otherMapOpen) {
+          await refreshOtherMap({ force: true });
         }
       } finally {
         setRefreshing(false);
       }
     });
-  }, [tryRefresh, refreshGps, refresh, refreshTakoyaki, takoyakiMapOpen]);
+  }, [tryRefresh, refreshGps, refresh, refreshOtherMap, otherMapOpen]);
 
   const onPressGps = useCallback(() => {
     void tryRefresh(async () => {
@@ -100,8 +100,8 @@ export default function HomeScreen() {
       <CategoryTabs
         value={category}
         onChange={setCategory}
-        onPressTakoyakiMap={() => {
-          setTakoyakiMapOpen(true);
+        onPressOtherMap={() => {
+          setOtherMapOpen(true);
           setCategory('other');
         }}
       />
@@ -127,12 +127,14 @@ export default function HomeScreen() {
       />
       {location ? (
         <NearbyMapModal
-          visible={takoyakiMapOpen}
-          title="타코야끼 지도"
+          visible={otherMapOpen}
+          title="기타 지도"
           stores={mapStores}
           centerLat={location.lat}
           centerLng={location.lng}
-          onClose={() => setTakoyakiMapOpen(false)}
+          category="other"
+          dayOfWeek={dayOfWeek}
+          onClose={() => setOtherMapOpen(false)}
         />
       ) : null}
     </SafeAreaView>

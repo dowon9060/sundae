@@ -53,6 +53,127 @@ type StoreWithLocation = StoreRow & {
   location_updated_at: string;
 };
 
+const D1_IN_CHUNK = 80;
+
+function chunkIds<T>(ids: T[], size: number): T[][] {
+  const chunks: T[][] = [];
+  for (let i = 0; i < ids.length; i += size) {
+    chunks.push(ids.slice(i, i + size));
+  }
+  return chunks;
+}
+
+type HourRow = {
+  store_id: string;
+  open_time: string | null;
+  close_time: string | null;
+  is_closed: number;
+};
+
+type ExceptionRow = {
+  store_id: string;
+  is_closed: number;
+  open_time: string | null;
+  close_time: string | null;
+};
+
+type MenuNameRow = {
+  store_id: string;
+  name: string;
+  sort_order: number;
+};
+
+async function batchBusinessHours(
+  db: Env['DB'],
+  storeIds: string[],
+  dayOfWeek: number
+): Promise<Map<string, HourRow>> {
+  const map = new Map<string, HourRow>();
+  if (storeIds.length === 0) return map;
+
+  for (const chunk of chunkIds(storeIds, D1_IN_CHUNK)) {
+    const placeholders = chunk.map(() => '?').join(', ');
+    const rows = await db
+      .prepare(
+        `SELECT store_id, open_time, close_time, is_closed
+         FROM business_hours
+         WHERE day_of_week = ? AND store_id IN (${placeholders})`
+      )
+      .bind(dayOfWeek, ...chunk)
+      .all<HourRow>();
+    for (const row of rows.results ?? []) {
+      map.set(row.store_id, row);
+    }
+  }
+  return map;
+}
+
+async function batchScheduleExceptions(
+  db: Env['DB'],
+  storeIds: string[],
+  dateStr: string
+): Promise<Map<string, ExceptionRow>> {
+  const map = new Map<string, ExceptionRow>();
+  if (storeIds.length === 0) return map;
+
+  for (const chunk of chunkIds(storeIds, D1_IN_CHUNK)) {
+    const placeholders = chunk.map(() => '?').join(', ');
+    const rows = await db
+      .prepare(
+        `SELECT store_id, is_closed, open_time, close_time
+         FROM schedule_exceptions
+         WHERE date = ? AND store_id IN (${placeholders})`
+      )
+      .bind(dateStr, ...chunk)
+      .all<ExceptionRow>();
+    for (const row of rows.results ?? []) {
+      map.set(row.store_id, row);
+    }
+  }
+  return map;
+}
+
+function menuSummaryFromRows(rows: MenuNameRow[]): Map<string, string | null> {
+  const perStore = new Map<string, string[]>();
+  for (const row of rows) {
+    const list = perStore.get(row.store_id) ?? [];
+    if (list.length < 3) {
+      list.push(row.name);
+      perStore.set(row.store_id, list);
+    }
+  }
+  const map = new Map<string, string | null>();
+  for (const [storeId, names] of perStore) {
+    map.set(storeId, names.length ? names.join(' · ') : null);
+  }
+  return map;
+}
+
+async function batchMenuSummaries(
+  db: Env['DB'],
+  storeIds: string[]
+): Promise<Map<string, string | null>> {
+  if (storeIds.length === 0) return new Map();
+
+  const allRows: MenuNameRow[] = [];
+  for (const chunk of chunkIds(storeIds, D1_IN_CHUNK)) {
+    const placeholders = chunk.map(() => '?').join(', ');
+    const rows = await db
+      .prepare(
+        `SELECT store_id, name, sort_order
+         FROM menus
+         WHERE is_available = 1 AND store_id IN (${placeholders})
+         ORDER BY store_id, sort_order ASC`
+      )
+      .bind(...chunk)
+      .all<MenuNameRow>();
+    if (rows.results?.length) {
+      allRows.push(...rows.results);
+    }
+  }
+  return menuSummaryFromRows(allRows);
+}
+
 export async function listNearbyStores(
   env: Env,
   opts: {
@@ -100,8 +221,12 @@ export async function listNearbyStores(
     .bind(...binds)
     .all<StoreWithLocation>();
 
-  const results: NearbyStoreResult[] = [];
+  type Candidate = StoreWithLocation & {
+    distance_m: number;
+    location_stale: boolean;
+  };
 
+  const candidates: Candidate[] = [];
   for (const row of rows.results ?? []) {
     const distance_m = Math.round(
       haversineMeters(opts.lat, opts.lng, row.lat, row.lng)
@@ -111,34 +236,31 @@ export async function listNearbyStores(
     const location_stale = isLocationStale(row.location_updated_at, staleDays);
     if (opts.excludeStale && location_stale) continue;
 
-    const hour = await env.DB.prepare(
-      `SELECT open_time, close_time, is_closed
-       FROM business_hours
-       WHERE store_id = ? AND day_of_week = ?`
-    )
-      .bind(row.id, dayOfWeek)
-      .first<{ open_time: string | null; close_time: string | null; is_closed: number }>();
+    candidates.push({ ...row, distance_m, location_stale });
+  }
 
-    let exception: {
-      is_closed: number;
-      open_time: string | null;
-      close_time: string | null;
-    } | null = null;
+  if (candidates.length === 0) {
+    return [];
+  }
 
-    if (isSelectedToday) {
-      exception =
-        (await env.DB.prepare(
-          `SELECT is_closed, open_time, close_time
-           FROM schedule_exceptions
-           WHERE store_id = ? AND date = ?`
-        )
-          .bind(row.id, seoul.dateStr)
-          .first<{
-            is_closed: number;
-            open_time: string | null;
-            close_time: string | null;
-          }>()) ?? null;
-    }
+  const storeIds = candidates.map((c) => c.id);
+
+  const [hoursByStore, exceptionsByStore, menuSummariesByStore] =
+    await Promise.all([
+      batchBusinessHours(env.DB, storeIds, dayOfWeek),
+      isSelectedToday
+        ? batchScheduleExceptions(env.DB, storeIds, seoul.dateStr)
+        : Promise.resolve(new Map<string, ExceptionRow>()),
+      batchMenuSummaries(env.DB, storeIds),
+    ]);
+
+  const results: NearbyStoreResult[] = [];
+
+  for (const row of candidates) {
+    const hour = hoursByStore.get(row.id);
+    const exception = isSelectedToday
+      ? (exceptionsByStore.get(row.id) ?? null)
+      : null;
 
     // 요일 탭은 그날 운영시간을 보여 주기 위함 — 휴무도 목록에 포함
     let is_closed_on_day = false;
@@ -158,23 +280,13 @@ export async function listNearbyStores(
       today_hours_label = `${dayLabel} ${hour.open_time}~${hour.close_time}`;
     }
 
-    const menuSummary = await env.DB.prepare(
-      `SELECT GROUP_CONCAT(name, ' · ') AS summary
-       FROM (
-         SELECT name FROM menus
-         WHERE store_id = ? AND is_available = 1
-         ORDER BY sort_order ASC
-         LIMIT 3
-       )`
-    )
-      .bind(row.id)
-      .first<{ summary: string | null }>();
+    const menu_summary = menuSummariesByStore.get(row.id) ?? null;
 
     results.push({
       ...row,
-      distance_m,
-      location_stale,
-      menu_summary: menuSummary?.summary ?? null,
+      distance_m: row.distance_m,
+      location_stale: row.location_stale,
+      menu_summary,
       today_hours_label,
       is_closed_on_day,
       like_count: Number(row.like_count ?? 0),

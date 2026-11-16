@@ -1,5 +1,5 @@
 import { Image, Pressable, StyleSheet, Text, View } from 'react-native';
-import { foodTruckIcon } from '../constants/images';
+import { foodTruckIcon, resolveStorePhotoUrl } from '../constants/images';
 import {
   androidFont,
   colors,
@@ -27,21 +27,24 @@ export function MenuList({ menus, onPressPhoto }: Props) {
       ) : (
         menus.map((menu) => (
           <View key={menu.id} style={styles.row}>
-            <Pressable
-              onPress={() => onPressPhoto?.(menu.photo_url)}
-              disabled={!onPressPhoto}
-            >
-              <Image
-                source={
-                  menu.photo_url ? { uri: menu.photo_url } : foodTruckIcon
-                }
-                style={[
-                  styles.thumb,
-                  !menu.photo_url && styles.thumbPlaceholder,
-                ]}
-                resizeMode={menu.photo_url ? 'cover' : 'contain'}
-              />
-            </Pressable>
+            {(() => {
+              const photo = resolveStorePhotoUrl(menu.photo_url);
+              return (
+                <Pressable
+                  onPress={() => onPressPhoto?.(photo)}
+                  disabled={!onPressPhoto}
+                >
+                  <Image
+                    source={photo ? { uri: photo } : foodTruckIcon}
+                    style={[
+                      styles.thumb,
+                      !photo && styles.thumbPlaceholder,
+                    ]}
+                    resizeMode={photo ? 'cover' : 'contain'}
+                  />
+                </Pressable>
+              );
+            })()}
             <View style={styles.body}>
               <Text
                 style={[styles.name, !menu.is_available && styles.unavailable]}

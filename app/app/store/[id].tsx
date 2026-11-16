@@ -1,5 +1,5 @@
 import { useLocalSearchParams } from 'expo-router';
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   Image,
@@ -17,7 +17,10 @@ import { NavigationSheet } from '../../components/NavigationSheet';
 import { PhotoLightbox } from '../../components/PhotoLightbox';
 import { ReportSheet } from '../../components/ReportSheet';
 import { StoreMap } from '../../components/StoreMap';
-import { foodTruckIcon } from '../../constants/images';
+import {
+  foodTruckIcon,
+  resolveStorePhotoUrl,
+} from '../../constants/images';
 import { colors, fonts, spacing, typography } from '../../constants/theme';
 import { useLocation } from '../../hooks/useLocation';
 import {
@@ -47,14 +50,35 @@ export default function StoreDetailScreen() {
   const [reportOpen, setReportOpen] = useState(false);
   const [lightboxOpen, setLightboxOpen] = useState(false);
   const [lightboxIndex, setLightboxIndex] = useState(0);
+  const lastDistanceLocationKeyRef = useRef<string | null>(null);
+
+  /** 등록된 실제 사진만 (스톡 제외) — 라이트박스 스와이프용 */
+  const allPhotos = useMemo(() => {
+    const list: string[] = [];
+    const seen = new Set<string>();
+    const push = (url: string | null | undefined) => {
+      const resolved = resolveStorePhotoUrl(url);
+      if (!resolved || seen.has(resolved)) return;
+      seen.add(resolved);
+      list.push(resolved);
+    };
+    push(store?.photo_url);
+    for (const m of menus) push(m.photo_url);
+    return list;
+  }, [store?.photo_url, menus]);
 
   useEffect(() => {
     if (!id) return;
     let cancelled = false;
 
+    setStore(null);
+    setMenus([]);
+    setHours([]);
+    setLoading(true);
+    setError(null);
+    lastDistanceLocationKeyRef.current = null;
+
     (async () => {
-      setLoading(true);
-      setError(null);
       try {
         const [detail, menuData, hourData] = await Promise.all([
           fetchStoreDetail(id, location?.lat, location?.lng),
@@ -79,9 +103,50 @@ export default function StoreDetailScreen() {
     return () => {
       cancelled = true;
     };
-  }, [id, location?.lat, location?.lng]);
+    // id 변경 시에만 전체 재로드 (위치는 별도 effect)
+  }, [id]);
 
-  if (loading) {
+  useEffect(() => {
+    if (!id) return;
+    if (location?.lat == null || location?.lng == null) return;
+    if (loading) return;
+    if (!store || String(store.id) !== String(id)) return;
+
+    const locationKey = `${location.lat},${location.lng}`;
+    if (lastDistanceLocationKeyRef.current === locationKey) return;
+    if (
+      store.distance_m != null &&
+      lastDistanceLocationKeyRef.current == null
+    ) {
+      lastDistanceLocationKeyRef.current = locationKey;
+      return;
+    }
+
+    let cancelled = false;
+    lastDistanceLocationKeyRef.current = locationKey;
+
+    (async () => {
+      try {
+        const detail = await fetchStoreDetail(id, location.lat, location.lng);
+        if (cancelled) return;
+        setStore(detail);
+      } catch (e) {
+        if (cancelled) return;
+        lastDistanceLocationKeyRef.current = null;
+        if (__DEV__) {
+          const msg =
+            e instanceof Error ? e.message : '거리 정보를 갱신하지 못했습니다.';
+          console.warn(msg);
+        }
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [id, location?.lat, location?.lng, loading, store?.id, store?.distance_m]);
+
+  if (loading && !store) {
     return (
       <View style={styles.center}>
         <ActivityIndicator color={colors.text} />
@@ -103,28 +168,17 @@ export default function StoreDetailScreen() {
     lng: store.lng,
   };
 
-  /** 등록된 사진 전체 (대표 + 메뉴) — 라이트박스 스와이프용 */
-  const allPhotos = useMemo(() => {
-    const list: string[] = [];
-    const seen = new Set<string>();
-    const push = (url: string | null | undefined) => {
-      if (!url || seen.has(url)) return;
-      seen.add(url);
-      list.push(url);
-    };
-    push(store.photo_url);
-    for (const m of menus) push(m.photo_url);
-    return list;
-  }, [store.photo_url, menus]);
+  const storePhoto = resolveStorePhotoUrl(store.photo_url);
 
   const previewUrls = [
-    ...menus.map((m) => m.photo_url),
-    store.photo_url,
+    ...menus.map((m) => resolveStorePhotoUrl(m.photo_url)),
+    storePhoto,
   ];
 
   const openLightbox = (url: string | null | undefined) => {
     if (allPhotos.length === 0) return;
-    const idx = url ? allPhotos.indexOf(url) : 0;
+    const resolved = resolveStorePhotoUrl(url);
+    const idx = resolved ? allPhotos.indexOf(resolved) : 0;
     setLightboxIndex(idx >= 0 ? idx : 0);
     setLightboxOpen(true);
   };
@@ -132,11 +186,11 @@ export default function StoreDetailScreen() {
   return (
     <View style={styles.container}>
       <ScrollView contentContainerStyle={styles.scroll}>
-        <Pressable onPress={() => openLightbox(store.photo_url)}>
+        <Pressable onPress={() => openLightbox(storePhoto)}>
           <Image
-            source={store.photo_url ? { uri: store.photo_url } : foodTruckIcon}
-            style={[styles.hero, !store.photo_url && styles.heroPlaceholder]}
-            resizeMode={store.photo_url ? 'cover' : 'contain'}
+            source={storePhoto ? { uri: storePhoto } : foodTruckIcon}
+            style={[styles.hero, !storePhoto && styles.heroPlaceholder]}
+            resizeMode={storePhoto ? 'cover' : 'contain'}
           />
         </Pressable>
 

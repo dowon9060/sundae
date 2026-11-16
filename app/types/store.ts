@@ -1,4 +1,4 @@
-export type StoreCategory = 'sundae' | 'chicken' | 'other' | 'all';
+export type StoreCategory = 'sundae' | 'chicken' | 'bungeoppang' | 'other' | 'all';
 export type BusinessStatus = 'expected' | 'confirmed_open' | 'unknown';
 
 export interface SavedLocation {
@@ -67,7 +67,8 @@ export interface LocationSearchResult {
 export const CATEGORY_LABELS: Record<Exclude<StoreCategory, 'all'>, string> = {
   sundae: '순대차',
   chicken: '통닭',
-  other: '타코야끼',
+  bungeoppang: '붕어빵',
+  other: '기타',
 };
 
 export function formatDistance(meters: number): string {

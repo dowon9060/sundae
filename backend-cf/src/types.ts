@@ -1,4 +1,4 @@
-export type StoreCategory = 'sundae' | 'chicken' | 'other';
+export type StoreCategory = 'sundae' | 'chicken' | 'other' | 'bungeoppang';
 export type BusinessStatus = 'expected' | 'confirmed_open' | 'unknown';
 export type StoreStatus = 'active' | 'inactive';
 

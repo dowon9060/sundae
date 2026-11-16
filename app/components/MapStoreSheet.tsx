@@ -1,6 +1,6 @@
 import { Image, Pressable, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { foodTruckIcon } from '../constants/images';
+import { foodTruckIcon, resolveStorePhotoUrl } from '../constants/images';
 import { colors, fonts, layout, spacing, typography } from '../constants/theme';
 import {
   businessStatusLabel,
@@ -38,16 +38,16 @@ export function MapStoreSheet({ store, onClose, onPressDetail }: Props) {
           style={styles.row}
           onPress={() => onPressDetail(store.id)}
         >
-          <Image
-            source={
-              store.photo_url ? { uri: store.photo_url } : foodTruckIcon
-            }
-            style={[
-              styles.thumb,
-              !store.photo_url && styles.thumbPlaceholder,
-            ]}
-            resizeMode={store.photo_url ? 'cover' : 'contain'}
-          />
+          {(() => {
+            const photo = resolveStorePhotoUrl(store.photo_url);
+            return (
+              <Image
+                source={photo ? { uri: photo } : foodTruckIcon}
+                style={[styles.thumb, !photo && styles.thumbPlaceholder]}
+                resizeMode={photo ? 'cover' : 'contain'}
+              />
+            );
+          })()}
           <View style={styles.body}>
             <Text
               style={[styles.name, closed && styles.muted]}

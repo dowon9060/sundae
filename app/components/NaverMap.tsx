@@ -14,7 +14,7 @@ export interface MapMarker {
   lat: number;
   lng: number;
   label?: string;
-  /** user=현위치, store=판매점(기본) */
+  /** user=현위치(일반 핀), store=판매점(푸드트럭) */
   kind?: 'user' | 'store';
 }
 
@@ -22,26 +22,33 @@ interface Props {
   lat: number;
   lng: number;
   zoom?: number;
-  /** 핀 드래그·지도 탭으로 위치 선택 */
+  /**
+   * 레거시: 핀 드래그·지도 탭으로 위치 선택
+   * centerPin 모드가 우선이면 무시됨
+   */
   interactive?: boolean;
-  /** 확대·축소·이동 허용 (지도로 보기 등) */
+  /** 확대·축소·이동 허용 */
   navigable?: boolean;
   /**
-   * true면 마커 bounds로 맞추지 않고 lat/lng 중심·zoom 유지
-   * (지도로 보기: 현위치 중심)
+   * true면 초기 중심을 lat/lng로 맞추고 fitBounds 하지 않음
    */
   lockCenter?: boolean;
-  /** 단일 마커 라벨 (markers 미사용 시) */
+  /**
+   * 중앙 고정 핀 모드 — 지도만 움직이고 선택 좌표는 지도 중심
+   * (지도에서 위치 선택)
+   */
+  centerPin?: boolean;
+  /** 단일 마커 라벨 (markers 미사용·centerPin 아닐 때) */
   label?: string;
-  /** 여러 핀. 있으면 이 목록으로 표시 */
   markers?: MapMarker[];
   style?: StyleProp<ViewStyle>;
   onPick?: (lat: number, lng: number) => void;
+  /** 지도 이동이 멈췄을 때 중심 좌표 */
+  onCameraIdle?: (lat: number, lng: number) => void;
   onPressMarker?: (index: number) => void;
 }
 
 const NCP_KEY_ID = process.env.EXPO_PUBLIC_NCP_KEY_ID?.trim() ?? '';
-/** NCP Web 서비스 URL에 https://localhost 와 http://localhost 모두 등록 */
 const MAP_BASE_URL = 'https://localhost';
 
 function buildHtml(
@@ -52,14 +59,17 @@ function buildHtml(
   interactive: boolean,
   navigable: boolean,
   lockCenter: boolean,
+  centerPin: boolean,
   label: string,
   markers: MapMarker[],
   markerIconUri: string
 ) {
   const markerPayload = JSON.stringify(
-    markers.length > 0
-      ? markers
-      : [{ lat, lng, label: label || '', kind: 'store' }]
+    centerPin
+      ? []
+      : markers.length > 0
+        ? markers
+        : [{ lat, lng, label: label || '', kind: 'store' }]
   );
 
   return `<!DOCTYPE html>
@@ -92,7 +102,7 @@ function buildHtml(
 <body>
   <div id="map"></div>
   ${
-    navigable
+    navigable || centerPin
       ? `<div class="zoom-ui">
     <button type="button" class="zoom-btn" id="zoomIn" aria-label="확대">+</button>
     <button type="button" class="zoom-btn" id="zoomOut" aria-label="축소">−</button>
@@ -103,13 +113,15 @@ function buildHtml(
     var lat = ${lat};
     var lng = ${lng};
     var interactive = ${interactive ? 'true' : 'false'};
-    var navigable = ${navigable ? 'true' : 'false'};
+    var navigable = ${navigable || centerPin ? 'true' : 'false'};
     var lockCenter = ${lockCenter ? 'true' : 'false'};
+    var centerPin = ${centerPin ? 'true' : 'false'};
     var points = ${markerPayload};
     var truckIconUri = ${JSON.stringify(markerIconUri)};
     var map = null;
     var marker = null;
     var markers = [];
+    var idleTimer = null;
 
     function post(payload) {
       if (window.ReactNativeWebView) {
@@ -125,27 +137,29 @@ function buildHtml(
         .replace(/"/g, '&quot;');
     }
 
-    /** 현위치(파란 점) 마커 */
-    function userPinIcon(text) {
+    /** 일반 위치 핀 (눈물방울형) */
+    function locationPinIcon(text, color) {
+      var fill = color || '#E14C4C';
       var label = text
-        ? '<div style="margin-top:4px;padding:3px 8px;border-radius:8px;background:#111;color:#fff;font:700 11px/1.2 sans-serif;white-space:nowrap;box-shadow:0 2px 8px rgba(0,0,0,.2);">' +
+        ? '<div style="margin-top:2px;padding:2px 7px;border-radius:8px;background:rgba(0,0,0,.78);color:#fff;font:700 10px/1.2 sans-serif;white-space:nowrap;box-shadow:0 1px 4px rgba(0,0,0,.2);">' +
           escapeHtml(text) +
           '</div>'
         : '';
       var html =
-        '<div style="width:64px;text-align:center;">' +
-        '<div style="width:22px;height:22px;margin:0 auto;border-radius:11px;background:#2B6CFF;' +
-        'border:3px solid #fff;box-shadow:0 0 0 6px rgba(43,108,255,.28),0 2px 8px rgba(0,0,0,.25);"></div>' +
+        '<div style="width:40px;text-align:center;transform:translateY(-2px);">' +
+        '<svg width="36" height="44" viewBox="0 0 36 44" xmlns="http://www.w3.org/2000/svg">' +
+        '<path d="M18 0C8.6 0 1 7.6 1 17c0 12.2 17 27 17 27s17-14.8 17-27C35 7.6 27.4 0 18 0z" fill="' + fill + '" stroke="#fff" stroke-width="2"/>' +
+        '<circle cx="18" cy="16" r="6" fill="#fff"/>' +
+        '</svg>' +
         label +
         '</div>';
       return {
         content: html,
-        size: new naver.maps.Size(64, text ? 48 : 28),
-        anchor: new naver.maps.Point(32, 14)
+        size: new naver.maps.Size(40, text ? 62 : 44),
+        anchor: new naver.maps.Point(20, 44)
       };
     }
 
-    /** 푸드트럭 아이콘 마커 — size 필수 */
     function pinIcon(text) {
       var label = text
         ? '<div style="margin-top:3px;max-width:110px;padding:3px 7px;border-radius:8px;background:#fff;color:#111;font:600 11px/1.2 sans-serif;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;box-shadow:0 2px 8px rgba(0,0,0,.14);">' +
@@ -166,9 +180,71 @@ function buildHtml(
       };
     }
 
-    function postPick(nextLat, nextLng) {
-      if (!interactive) return;
-      post({ type: 'pick', lat: nextLat, lng: nextLng });
+    function clearMarkers() {
+      for (var i = 0; i < markers.length; i++) {
+        markers[i].setMap(null);
+      }
+      markers = [];
+      marker = null;
+    }
+
+    function addPointMarker(p, index) {
+      var pos = new naver.maps.LatLng(Number(p.lat), Number(p.lng));
+      var isUser = p.kind === 'user';
+      var icon = isUser
+        ? locationPinIcon(p.label || '현위치', '#2B6CFF')
+        : pinIcon(p.label || '');
+      var m;
+      try {
+        m = new naver.maps.Marker({
+          position: pos,
+          map: map,
+          draggable: false,
+          icon: icon,
+          zIndex: isUser ? 1000 : 100 + index,
+          clickable: !isUser
+        });
+      } catch (err) {
+        m = new naver.maps.Marker({
+          position: pos,
+          map: map,
+          title: p.label || '',
+          clickable: !isUser
+        });
+      }
+      if (!isUser) {
+        (function (i) {
+          naver.maps.Event.addListener(m, 'click', function () {
+            post({ type: 'marker', index: i });
+          });
+        })(index);
+      }
+      markers.push(m);
+      if (index === 0) marker = m;
+      return pos;
+    }
+
+    function renderPoints(list) {
+      clearMarkers();
+      points = list || [];
+      for (var i = 0; i < points.length; i++) {
+        addPointMarker(points[i], i);
+      }
+      post({ type: 'markers', count: markers.length });
+    }
+
+    function postCenterIdle() {
+      if (!map) return;
+      var c = map.getCenter();
+      post({ type: 'idle', lat: c.y, lng: c.x });
+      if (centerPin) {
+        post({ type: 'pick', lat: c.y, lng: c.x });
+      }
+    }
+
+    function scheduleIdle() {
+      if (idleTimer) clearTimeout(idleTimer);
+      idleTimer = setTimeout(postCenterIdle, 280);
     }
 
     function initMap() {
@@ -190,51 +266,18 @@ function buildHtml(
           mapTypeControl: false
         });
 
-        var bounds = new naver.maps.LatLngBounds();
-        markers = [];
+        if (!centerPin) {
+          renderPoints(points);
+        }
 
-        points.forEach(function (p, index) {
-          var pos = new naver.maps.LatLng(Number(p.lat), Number(p.lng));
-          bounds.extend(pos);
-          var isUser = p.kind === 'user';
-          var icon = isUser ? userPinIcon(p.label || '현위치') : pinIcon(p.label || '');
-          var m;
-          try {
-            m = new naver.maps.Marker({
-              position: pos,
-              map: map,
-              draggable: interactive && points.length === 1 && !isUser,
-              icon: icon,
-              zIndex: isUser ? 1000 : 100 + index,
-              clickable: !isUser
-            });
-          } catch (err) {
-            m = new naver.maps.Marker({
-              position: pos,
-              map: map,
-              draggable: interactive && points.length === 1 && !isUser,
-              title: p.label || '',
-              clickable: !isUser
-            });
-          }
-          if (!isUser) {
-            (function (i) {
-              naver.maps.Event.addListener(m, 'click', function () {
-                post({ type: 'marker', index: i });
-              });
-            })(index);
-          }
-          markers.push(m);
-          if (index === 0) marker = m;
-        });
-
-        post({ type: 'markers', count: markers.length });
-
-        // 현위치 중심 고정(지도로 보기) 또는 단일/다중 마커 맞춤
-        if (lockCenter) {
+        if (lockCenter || centerPin) {
           map.setCenter(new naver.maps.LatLng(lat, lng));
           map.setZoom(${zoom}, false);
         } else if (points.length > 1) {
+          var bounds = new naver.maps.LatLngBounds();
+          for (var i = 0; i < points.length; i++) {
+            bounds.extend(new naver.maps.LatLng(Number(points[i].lat), Number(points[i].lng)));
+          }
           map.fitBounds(bounds, { top: 64, right: 64, bottom: 64, left: 64 });
         } else if (points.length === 1) {
           map.setCenter(new naver.maps.LatLng(Number(points[0].lat), Number(points[0].lng)));
@@ -255,17 +298,26 @@ function buildHtml(
           });
         }
 
-        if (interactive && points.length === 1 && marker) {
+        // 지도 이동 종료 시 중심 좌표 전달
+        naver.maps.Event.addListener(map, 'dragend', scheduleIdle);
+        naver.maps.Event.addListener(map, 'zoom_changed', scheduleIdle);
+        naver.maps.Event.addListener(map, 'idle', scheduleIdle);
+
+        // 레거시 interactive (centerPin 아닐 때 탭/드래그)
+        if (interactive && !centerPin && points.length === 1 && marker) {
+          marker.setDraggable(true);
           naver.maps.Event.addListener(marker, 'dragend', function () {
             var p = marker.getPosition();
-            postPick(p.y, p.x);
+            post({ type: 'pick', lat: p.y, lng: p.x });
           });
           naver.maps.Event.addListener(map, 'click', function (e) {
             marker.setPosition(e.coord);
-            postPick(e.coord.y, e.coord.x);
+            post({ type: 'pick', lat: e.coord.y, lng: e.coord.x });
           });
         }
+
         post({ type: 'ready', provider: 'naver' });
+        if (centerPin) postCenterIdle();
       } catch (e) {
         post({ type: 'error', message: String(e && e.message ? e.message : e) });
       }
@@ -274,22 +326,29 @@ function buildHtml(
     function setPosition(nextLat, nextLng) {
       lat = nextLat;
       lng = nextLng;
-      if (!map || !marker) return;
+      if (!map) return;
       var pos = new naver.maps.LatLng(nextLat, nextLng);
-      marker.setPosition(pos);
       map.setCenter(pos);
+      if (marker && !centerPin) marker.setPosition(pos);
+    }
+
+    function setMarkersFromNative(list) {
+      if (!map || centerPin) return;
+      renderPoints(list || []);
     }
 
     document.addEventListener('message', function (event) {
       try {
         var data = JSON.parse(event.data);
         if (data.type === 'set') setPosition(data.lat, data.lng);
+        if (data.type === 'markers') setMarkersFromNative(data.points);
       } catch (e) {}
     });
     window.addEventListener('message', function (event) {
       try {
         var data = typeof event.data === 'string' ? JSON.parse(event.data) : event.data;
         if (data && data.type === 'set') setPosition(data.lat, data.lng);
+        if (data && data.type === 'markers') setMarkersFromNative(data.points);
       } catch (e) {}
     });
   </script>
@@ -304,17 +363,22 @@ export function NaverMap({
   interactive = false,
   navigable,
   lockCenter = false,
+  centerPin = false,
   label = '',
   markers,
   style,
   onPick,
+  onCameraIdle,
   onPressMarker,
 }: Props) {
   const webRef = useRef<WebView>(null);
   const [authFailed, setAuthFailed] = useState(false);
+  const [ready, setReady] = useState(false);
   const markerKey = JSON.stringify(markers ?? []);
   const canNavigate =
-    navigable ?? (interactive || (markers != null && markers.length > 0));
+    navigable ??
+    centerPin ??
+    (interactive || (markers != null && markers.length > 0));
 
   const html = useMemo(
     () =>
@@ -325,22 +389,33 @@ export function NaverMap({
             lng,
             zoom,
             interactive,
-            canNavigate,
+            Boolean(canNavigate),
             lockCenter,
+            centerPin,
             label,
             markers ?? [],
             FOOD_TRUCK_MARKER_DATA_URI
           )
         : '',
+    // 초기 HTML만 — 이후 마커는 inject 로 갱신 (카메라 유지)
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [interactive, canNavigate, lockCenter, zoom, label, markerKey, lat, lng]
+    [interactive, canNavigate, lockCenter, centerPin, zoom, label]
   );
 
+  // 지도 준비 후 / markers 변경 시 판매점·현위치 마커만 갱신
   useEffect(() => {
-    if (!NCP_KEY_ID || authFailed || (markers && markers.length > 0)) return;
+    if (!ready || !NCP_KEY_ID || authFailed || centerPin) return;
+    const points = markers ?? [];
+    const js = `setMarkersFromNative(${JSON.stringify(points)}); true;`;
+    webRef.current?.injectJavaScript(js);
+  }, [ready, markerKey, authFailed, centerPin, markers]);
+
+  useEffect(() => {
+    if (!NCP_KEY_ID || authFailed || centerPin) return;
+    if (markers && markers.length > 0) return;
     const js = `setPosition(${lat}, ${lng}); true;`;
     webRef.current?.injectJavaScript(js);
-  }, [lat, lng, authFailed, markers]);
+  }, [lat, lng, authFailed, markers, centerPin]);
 
   const onMessage = (event: WebViewMessageEvent) => {
     try {
@@ -354,9 +429,20 @@ export function NaverMap({
         setAuthFailed(true);
         return;
       }
+      if (data.type === 'ready') {
+        setReady(true);
+        return;
+      }
       if (data.type === 'marker' && typeof data.index === 'number') {
         onPressMarker?.(data.index);
         return;
+      }
+      if (
+        data.type === 'idle' &&
+        typeof data.lat === 'number' &&
+        typeof data.lng === 'number'
+      ) {
+        onCameraIdle?.(data.lat, data.lng);
       }
       if (
         data.type === 'pick' &&
@@ -415,6 +501,14 @@ export function NaverMap({
         overScrollMode="never"
         bounces={false}
       />
+      {centerPin ? (
+        <View pointerEvents="none" style={styles.centerPinWrap}>
+          <View style={styles.centerPin}>
+            <View style={styles.pinHead} />
+            <View style={styles.pinPoint} />
+          </View>
+        </View>
+      ) : null}
     </View>
   );
 }
@@ -428,6 +522,39 @@ const styles = StyleSheet.create({
   web: {
     flex: 1,
     backgroundColor: 'transparent',
+  },
+  centerPinWrap: {
+    ...StyleSheet.absoluteFillObject,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  centerPin: {
+    alignItems: 'center',
+    marginTop: -22,
+  },
+  pinHead: {
+    width: 22,
+    height: 22,
+    borderRadius: 11,
+    backgroundColor: '#E14C4C',
+    borderWidth: 3,
+    borderColor: '#FFFFFF',
+    shadowColor: '#000',
+    shadowOpacity: 0.25,
+    shadowRadius: 4,
+    shadowOffset: { width: 0, height: 2 },
+    elevation: 4,
+  },
+  pinPoint: {
+    width: 0,
+    height: 0,
+    marginTop: -2,
+    borderLeftWidth: 7,
+    borderRightWidth: 7,
+    borderTopWidth: 12,
+    borderLeftColor: 'transparent',
+    borderRightColor: 'transparent',
+    borderTopColor: '#E14C4C',
   },
   fallback: {
     alignItems: 'center',

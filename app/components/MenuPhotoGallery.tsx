@@ -1,5 +1,5 @@
 import { Image, Pressable, StyleSheet, Text, View } from 'react-native';
-import { foodTruckIcon } from '../constants/images';
+import { foodTruckIcon, resolveStorePhotoUrl } from '../constants/images';
 import {
   androidFont,
   colors,
@@ -25,7 +25,10 @@ export function MenuPhotoGallery({
   showPlaceholdersWhenEmpty = true,
   onPressPhoto,
 }: Props) {
-  const photos = urls.filter((u): u is string => Boolean(u)).slice(0, MAX_PREVIEW);
+  const photos = urls
+    .map((u) => resolveStorePhotoUrl(u))
+    .filter((u): u is string => Boolean(u))
+    .slice(0, MAX_PREVIEW);
 
   const slots: (string | null)[] =
     photos.length > 0

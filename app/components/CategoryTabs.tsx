@@ -5,16 +5,18 @@ import type { StoreCategory } from '../types/store';
 const TABS: { key: StoreCategory; label: string }[] = [
   { key: 'sundae', label: '순대차' },
   { key: 'chicken', label: '통닭' },
-  { key: 'other', label: '타코야끼' },
+  { key: 'bungeoppang', label: '붕어빵' },
+  { key: 'other', label: '기타' },
 ];
 
 interface Props {
   value: StoreCategory;
   onChange: (value: StoreCategory) => void;
-  onPressTakoyakiMap?: () => void;
+  /** 기타(타코야끼·호떡·곱창·회 등) 지도 */
+  onPressOtherMap?: () => void;
 }
 
-export function CategoryTabs({ value, onChange, onPressTakoyakiMap }: Props) {
+export function CategoryTabs({ value, onChange, onPressOtherMap }: Props) {
   return (
     <View style={styles.wrap}>
       <ScrollView
@@ -39,8 +41,8 @@ export function CategoryTabs({ value, onChange, onPressTakoyakiMap }: Props) {
                   {tab.label}
                 </Text>
               </Pressable>
-              {tab.key === 'other' && onPressTakoyakiMap ? (
-                <Pressable style={styles.mapChip} onPress={onPressTakoyakiMap}>
+              {tab.key === 'other' && onPressOtherMap ? (
+                <Pressable style={styles.mapChip} onPress={onPressOtherMap}>
                   <Text
                     style={styles.mapChipLabel}
                     allowFontScaling

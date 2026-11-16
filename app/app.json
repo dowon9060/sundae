@@ -4,7 +4,7 @@
     "slug": "sundaecha",
     "version": "1.0.0",
     "orientation": "portrait",
-    "icon": "./assets/images/icon.png",
+    "icon": "./assets/images/sundea_logo.png",
     "scheme": "sundaecha",
     "userInterfaceStyle": "light",
     "ios": {
@@ -18,10 +18,10 @@
     },
     "android": {
       "package": "com.sundaecha.app",
-      "versionCode": 5,
+      "versionCode": 9,
       "adaptiveIcon": {
-        "backgroundColor": "#F7F7F8",
-        "foregroundImage": "./assets/images/android-icon-foreground.png",
+        "backgroundColor": "#FFF9E8",
+        "foregroundImage": "./assets/images/sundea_logo.png",
         "backgroundImage": "./assets/images/android-icon-background.png",
         "monochromeImage": "./assets/images/android-icon-monochrome.png"
       },
@@ -38,17 +38,17 @@
     "web": {
       "bundler": "metro",
       "output": "static",
-      "favicon": "./assets/images/favicon.png"
+      "favicon": "./assets/images/sundea_logo.png"
     },
     "plugins": [
       "expo-router",
       [
         "expo-splash-screen",
         {
-          "image": "./assets/images/foodtruck-icon.png",
+          "image": "./assets/images/sundea_logo.png",
           "imageWidth": 200,
           "resizeMode": "contain",
-          "backgroundColor": "#FFF8F3"
+          "backgroundColor": "#FFF9E8"
         }
       ],
       [

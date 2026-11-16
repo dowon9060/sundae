@@ -8,7 +8,14 @@ import {
   View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { colors, fonts, layout, spacing, typography } from '../constants/theme';
+import {
+  androidFont,
+  colors,
+  fonts,
+  layout,
+  spacing,
+  typography,
+} from '../constants/theme';
 import { reverseGeocodeAddress } from '../services/location';
 import { openNaverMapPlace } from '../services/navigation';
 import { NaverMap } from './NaverMap';
@@ -65,16 +72,18 @@ export function LocationMapPicker({
         </View>
 
         <Text style={styles.hint}>
-          지도를 탭하거나 핀을 드래그해 위치를 바꿔 주세요.
+          지도를 움직이면 중앙 핀 위치가 선택됩니다. 멈춘 뒤 주소를 확인하세요.
         </Text>
 
         <View style={styles.mapWrap}>
           {visible ? (
             <NaverMap
-              lat={coord.lat}
-              lng={coord.lng}
-              interactive
-              label="선택 위치"
+              key={`pick-${initialLat.toFixed(5)}-${initialLng.toFixed(5)}`}
+              lat={initialLat}
+              lng={initialLng}
+              zoom={16}
+              centerPin
+              lockCenter
               onPick={(lat, lng) => setCoord({ lat, lng })}
             />
           ) : null}
@@ -144,11 +153,15 @@ const styles = StyleSheet.create({
     fontFamily: fonts.bold,
     color: colors.text,
     fontSize: 18,
+    lineHeight: 27,
+    ...androidFont,
   },
   close: {
     fontFamily: fonts.medium,
     color: colors.accent,
     fontSize: 16,
+    lineHeight: 24,
+    ...androidFont,
   },
   hint: {
     ...typography.caption,
@@ -172,7 +185,9 @@ const styles = StyleSheet.create({
     fontFamily: fonts.medium,
     color: colors.text,
     fontSize: 15,
+    lineHeight: 22,
     minHeight: 40,
+    ...androidFont,
   },
   naverBtn: {
     borderRadius: 12,
@@ -186,6 +201,8 @@ const styles = StyleSheet.create({
     fontFamily: fonts.medium,
     color: colors.text,
     fontSize: 15,
+    lineHeight: 22,
+    ...androidFont,
   },
   confirmBtn: {
     borderRadius: 12,
@@ -200,5 +217,7 @@ const styles = StyleSheet.create({
     fontFamily: fonts.bold,
     color: '#FFFFFF',
     fontSize: 16,
+    lineHeight: 24,
+    ...androidFont,
   },
 });

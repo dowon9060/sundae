@@ -36,7 +36,7 @@ const WEAK_ADMIN_KEYS = new Set([
   'secret',
 ]);
 
-const CATEGORIES = new Set(['sundae', 'chicken', 'other']);
+const CATEGORIES = new Set(['sundae', 'chicken', 'other', 'bungeoppang']);
 const STATUSES = new Set(['active', 'inactive']);
 const BUSINESS_STATUSES = new Set(['expected', 'confirmed_open', 'unknown']);
 

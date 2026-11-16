@@ -1,6 +1,13 @@
 import { useRouter } from 'expo-router';
-import { useEffect, useMemo, useState } from 'react';
-import { Modal, Pressable, StyleSheet, Text, View } from 'react-native';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import {
+  ActivityIndicator,
+  Modal,
+  Pressable,
+  StyleSheet,
+  Text,
+  View,
+} from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import {
   androidFont,
@@ -10,37 +17,52 @@ import {
   spacing,
   typography,
 } from '../constants/theme';
-import type { NearbyStore } from '../types/store';
+import { fetchNearbyStores } from '../services/api';
+import type { NearbyStore, StoreCategory } from '../types/store';
 import { MapStoreSheet } from './MapStoreSheet';
 import { NaverMap, type MapMarker } from './NaverMap';
 
 interface Props {
   visible: boolean;
   title?: string;
+  /** 초기 표시용 (열릴 때 한 번) */
   stores: NearbyStore[];
   centerLat: number;
   centerLng: number;
+  category?: StoreCategory;
+  dayOfWeek: number;
   onClose: () => void;
 }
 
+const RADIUS_M = 5000;
+
 export function NearbyMapModal({
   visible,
-  title = '타코야끼 지도',
-  stores,
+  title = '기타 지도',
+  stores: initialStores,
   centerLat,
   centerLng,
+  category = 'other',
+  dayOfWeek,
   onClose,
 }: Props) {
   const router = useRouter();
   const [selected, setSelected] = useState<NearbyStore | null>(null);
+  const [mapStores, setMapStores] = useState<NearbyStore[]>(initialStores);
+  const [loadingNearby, setLoadingNearby] = useState(false);
+  const seqRef = useRef(0);
+  const lastFetchRef = useRef(0);
 
   useEffect(() => {
-    if (!visible) setSelected(null);
-  }, [visible]);
+    if (!visible) {
+      setSelected(null);
+      return;
+    }
+    setMapStores(initialStores);
+  }, [visible, initialStores]);
 
-  /** 0번=현위치, 이후=판매점 — 클릭 시 index-1 로 매핑 */
   const markers = useMemo<MapMarker[]>(() => {
-    const storePins: MapMarker[] = stores.map((s) => ({
+    const storePins: MapMarker[] = mapStores.map((s) => ({
       lat: s.lat,
       lng: s.lng,
       label: s.name,
@@ -55,7 +77,36 @@ export function NearbyMapModal({
       },
       ...storePins,
     ];
-  }, [stores, centerLat, centerLng]);
+  }, [mapStores, centerLat, centerLng]);
+
+  const loadNearby = useCallback(
+    async (lat: number, lng: number) => {
+      const now = Date.now();
+      if (now - lastFetchRef.current < 600) return;
+      lastFetchRef.current = now;
+      const seq = ++seqRef.current;
+      setLoadingNearby(true);
+      try {
+        const data = await fetchNearbyStores({
+          lat,
+          lng,
+          category,
+          radius: RADIUS_M,
+          day: dayOfWeek,
+        });
+        if (seq !== seqRef.current) return;
+        setMapStores(data);
+        setSelected((prev) =>
+          prev && data.some((s) => s.id === prev.id) ? prev : null
+        );
+      } catch {
+        // 네트워크 실패 시 기존 마커 유지
+      } finally {
+        if (seq === seqRef.current) setLoadingNearby(false);
+      }
+    },
+    [category, dayOfWeek]
+  );
 
   return (
     <Modal visible={visible} animationType="slide" presentationStyle="fullScreen">
@@ -67,26 +118,33 @@ export function NearbyMapModal({
           </Pressable>
         </View>
 
-        <Text style={styles.hint}>
-          {stores.length > 0
-            ? `현위치 기준 · 주변 ${stores.length}곳 · 핀을 누르면 정보가 열립니다.`
-            : '현위치를 중심으로 표시합니다. 주변에 판매점이 없습니다.'}
-        </Text>
+        <View style={styles.hintRow}>
+          <Text style={styles.hint}>
+            {mapStores.length > 0
+              ? `지도 중심 주변 ${mapStores.length}곳 · 이동 후 멈추면 다시 불러옵니다.`
+              : '지도를 움직인 뒤 멈추면 주변 판매점을 불러옵니다.'}
+          </Text>
+          {loadingNearby ? (
+            <ActivityIndicator size="small" color={colors.textSecondary} />
+          ) : null}
+        </View>
 
         <View style={styles.mapWrap}>
           {visible ? (
             <NaverMap
-              key={`map-${centerLat.toFixed(5)}-${centerLng.toFixed(5)}-${stores.length}`}
+              key={`browse-${centerLat.toFixed(4)}-${centerLng.toFixed(4)}`}
               lat={centerLat}
               lng={centerLng}
               zoom={15}
               navigable
               lockCenter
               markers={markers}
+              onCameraIdle={(lat, lng) => {
+                void loadNearby(lat, lng);
+              }}
               onPressMarker={(index) => {
-                // 0 = 현위치 마커
                 if (index <= 0) return;
-                const store = stores[index - 1];
+                const store = mapStores[index - 1];
                 if (!store) return;
                 setSelected(store);
               }}
@@ -134,10 +192,16 @@ const styles = StyleSheet.create({
     lineHeight: 24,
     ...androidFont,
   },
-  hint: {
-    ...typography.caption,
+  hintRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
     paddingHorizontal: layout.screenPadding,
     paddingBottom: spacing.sm,
+  },
+  hint: {
+    ...typography.caption,
+    flex: 1,
   },
   mapWrap: {
     flex: 1,

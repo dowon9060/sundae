@@ -1,13 +1,13 @@
 import { Image, StyleSheet, Text, View } from 'react-native';
-import { foodTruckIcon } from '../constants/images';
+import { appLogo } from '../constants/images';
 import { colors, fonts } from '../constants/theme';
 
-/** 앱 실행 시 귀여운 푸드트럭 로고 스플래시 */
+/** 앱 실행 시 순대차 로고 스플래시 */
 export function AppSplash() {
   return (
     <View style={styles.wrap} accessibilityLabel="순대차 로고">
       <View style={styles.logoGlow}>
-        <Image source={foodTruckIcon} style={styles.logo} resizeMode="contain" />
+        <Image source={appLogo} style={styles.logo} resizeMode="contain" />
       </View>
       <Text style={styles.brand}>순대차</Text>
       <Text style={styles.sub}>내 주변 이동식 판매점</Text>
@@ -19,7 +19,7 @@ const styles = StyleSheet.create({
   wrap: {
     ...StyleSheet.absoluteFillObject,
     zIndex: 100,
-    backgroundColor: '#FFF8F3',
+    backgroundColor: '#FFF9E8',
     alignItems: 'center',
     justifyContent: 'center',
     paddingHorizontal: 32,
@@ -27,8 +27,8 @@ const styles = StyleSheet.create({
   logoGlow: {
     width: 200,
     height: 200,
-    borderRadius: 100,
-    backgroundColor: '#FFE8D6',
+    borderRadius: 44,
+    backgroundColor: '#FFF3C4',
     alignItems: 'center',
     justifyContent: 'center',
     overflow: 'hidden',
