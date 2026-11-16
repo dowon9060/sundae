@@ -9,7 +9,7 @@ import {
   Text,
   View,
 } from 'react-native';
-import { foodTruckIcon, resolveStorePhotoUrl } from '../constants/images';
+import { resolveStoreImageSource } from '../constants/images';
 import {
   androidFont,
   colors,
@@ -88,12 +88,15 @@ export function StoreCard({ store, onPress, onLikeChange }: Props) {
     >
       <View style={styles.thumbWrap}>
         {(() => {
-          const photo = resolveStorePhotoUrl(store.photo_url);
+          const { source, isPhoto } = resolveStoreImageSource(
+            store.photo_url,
+            store.category
+          );
           return (
             <Image
-              source={photo ? { uri: photo } : foodTruckIcon}
-              style={[styles.thumb, !photo && styles.thumbPlaceholder]}
-              resizeMode={photo ? 'cover' : 'contain'}
+              source={source}
+              style={[styles.thumb, !isPhoto && styles.thumbPlaceholder]}
+              resizeMode={isPhoto ? 'cover' : 'contain'}
             />
           );
         })()}

@@ -18,7 +18,7 @@ import { PhotoLightbox } from '../../components/PhotoLightbox';
 import { ReportSheet } from '../../components/ReportSheet';
 import { StoreMap } from '../../components/StoreMap';
 import {
-  foodTruckIcon,
+  resolveStoreImageSource,
   resolveStorePhotoUrl,
 } from '../../constants/images';
 import { colors, fonts, spacing, typography } from '../../constants/theme';
@@ -169,6 +169,8 @@ export default function StoreDetailScreen() {
   };
 
   const storePhoto = resolveStorePhotoUrl(store.photo_url);
+  const { source: storeImageSource, isPhoto: hasStorePhoto } =
+    resolveStoreImageSource(store.photo_url, store.category);
 
   const previewUrls = [
     ...menus.map((m) => resolveStorePhotoUrl(m.photo_url)),
@@ -188,9 +190,9 @@ export default function StoreDetailScreen() {
       <ScrollView contentContainerStyle={styles.scroll}>
         <Pressable onPress={() => openLightbox(storePhoto)}>
           <Image
-            source={storePhoto ? { uri: storePhoto } : foodTruckIcon}
-            style={[styles.hero, !storePhoto && styles.heroPlaceholder]}
-            resizeMode={storePhoto ? 'cover' : 'contain'}
+            source={storeImageSource}
+            style={[styles.hero, !hasStorePhoto && styles.heroPlaceholder]}
+            resizeMode={hasStorePhoto ? 'cover' : 'contain'}
           />
         </Pressable>
 

@@ -1,3 +1,7 @@
+import type { ImageSourcePropType } from 'react-native';
+import { CATEGORY_CHIP_IMAGES } from './categoryImages';
+import type { StoreCategory } from '../types/store';
+
 /** 앱 로고 (스플래시·아이콘) — public/sundea_logo.png */
 export const appLogo = require('../assets/images/sundea_logo.png');
 
@@ -22,4 +26,24 @@ export function resolveStorePhotoUrl(
   const lower = url.toLowerCase();
   if (STOCK_HOSTS.some((h) => lower.includes(h))) return null;
   return url;
+}
+
+/** 판매점 사진 또는 카테고리 이미지(없으면 기본 플레이스홀더) */
+export function resolveStoreImageSource(
+  photoUrl: string | null | undefined,
+  category?: StoreCategory | string | null
+): { source: ImageSourcePropType; isPhoto: boolean } {
+  const photo = resolveStorePhotoUrl(photoUrl);
+  if (photo) {
+    return { source: { uri: photo }, isPhoto: true };
+  }
+  const key =
+    category && category !== 'all'
+      ? (category as Exclude<StoreCategory, 'all'>)
+      : null;
+  const categoryImage = key ? CATEGORY_CHIP_IMAGES[key] : undefined;
+  return {
+    source: categoryImage ?? foodTruckIcon,
+    isPhoto: false,
+  };
 }
