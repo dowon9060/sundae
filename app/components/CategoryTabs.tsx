@@ -1,14 +1,16 @@
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { colors, layout, spacing, typography } from '../constants/theme';
-import type { StoreCategory } from '../types/store';
+import { CATEGORY_LABELS, type StoreCategory } from '../types/store';
 
-const TABS: { key: Exclude<StoreCategory, 'all'>; label: string }[] = [
-  { key: 'sundae', label: '순대차' },
-  { key: 'bungeoppang', label: '붕어빵' },
-  { key: 'dakkochi', label: '닭꼬치' },
-  { key: 'mandu', label: '만두' },
-  { key: 'takoyaki', label: '타코야키' },
-  { key: 'chicken', label: '치킨' },
+const TABS: { key: StoreCategory; label: string }[] = [
+  { key: 'all', label: '전체' },
+  { key: 'sundae', label: CATEGORY_LABELS.sundae },
+  { key: 'bungeoppang', label: CATEGORY_LABELS.bungeoppang },
+  { key: 'dakkochi', label: CATEGORY_LABELS.dakkochi },
+  { key: 'mandu', label: CATEGORY_LABELS.mandu },
+  { key: 'takoyaki', label: CATEGORY_LABELS.takoyaki },
+  { key: 'chicken', label: CATEGORY_LABELS.chicken },
+  { key: 'other', label: CATEGORY_LABELS.other },
 ];
 
 interface Props {
@@ -39,12 +41,12 @@ export function CategoryTabs({ value, onChange, onPressMap }: Props) {
           </Pressable>
         ) : null}
         {TABS.map((tab) => {
-          const active = value === 'all' ? false : tab.key === value;
+          const active = value === tab.key;
           return (
             <Pressable
               key={tab.key}
               style={[styles.chip, active && styles.chipActive]}
-              onPress={() => onChange(value === tab.key ? 'all' : tab.key)}
+              onPress={() => onChange(tab.key)}
             >
               <Text
                 style={[styles.label, active && styles.labelActive]}
