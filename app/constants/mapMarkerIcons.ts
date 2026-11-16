@@ -1,4 +1,4 @@
-/** 지도 마커용 카테고리별 아이콘 (이미지 data URI + 기본 트럭) */
+/** 지도 마커용 카테고리별 아이콘 (이미지 data URI + 기본 트럭 폴백) */
 
 import { CATEGORY_MARKER_IMAGE_DATA } from './categoryMarkerImages';
 import { FOOD_TRUCK_MARKER_DATA_URI } from './foodTruckMarkerData';
@@ -20,7 +20,7 @@ export const CATEGORY_MARKER_COLORS: Record<MapStoreCategory, string> = {
   other: '#2FBF5B',
 };
 
-/** 커스텀 이미지 마커 (우선). 없으면 이모지/트럭 */
+/** 커스텀 이미지 마커 */
 export const CATEGORY_MARKER_IMAGE: Partial<Record<MapStoreCategory, string>> = {
   sundae: CATEGORY_MARKER_IMAGE_DATA.sundae,
   bungeoppang: CATEGORY_MARKER_IMAGE_DATA.bungeoppang,
@@ -28,9 +28,13 @@ export const CATEGORY_MARKER_IMAGE: Partial<Record<MapStoreCategory, string>> = 
   mandu: CATEGORY_MARKER_IMAGE_DATA.mandu,
   takoyaki: CATEGORY_MARKER_IMAGE_DATA.takoyaki,
   chicken: CATEGORY_MARKER_IMAGE_DATA.chicken,
+  gopchang: CATEGORY_MARKER_IMAGE_DATA.gopchang,
+  hotteok: CATEGORY_MARKER_IMAGE_DATA.hotteok,
+  hoe: CATEGORY_MARKER_IMAGE_DATA.hoe,
+  other: CATEGORY_MARKER_IMAGE_DATA.other,
 };
 
-/** 마커 이모지 (이미지 없고 기타가 아닐 때) */
+/** 이미지 없을 때 폴백 이모지 (현재 전부 이미지 사용) */
 export const CATEGORY_MARKER_EMOJI: Record<MapStoreCategory, string> = {
   sundae: '',
   bungeoppang: '',
@@ -38,9 +42,9 @@ export const CATEGORY_MARKER_EMOJI: Record<MapStoreCategory, string> = {
   mandu: '',
   takoyaki: '',
   chicken: '',
-  gopchang: '🥩',
-  hotteok: '🥞',
-  hoe: '🦑',
+  gopchang: '',
+  hotteok: '',
+  hoe: '',
   other: '',
 };
 

@@ -11,4 +11,8 @@ export const CATEGORY_CHIP_IMAGES: Partial<
   mandu: require('../assets/images/categories/mandu.png'),
   takoyaki: require('../assets/images/categories/takoyaki.png'),
   chicken: require('../assets/images/categories/chicken.png'),
+  gopchang: require('../assets/images/categories/gopchang.png'),
+  hotteok: require('../assets/images/categories/hotteok.png'),
+  hoe: require('../assets/images/categories/hoe.png'),
+  other: require('../assets/images/categories/other.png'),
 };
