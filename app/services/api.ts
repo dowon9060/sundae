@@ -184,3 +184,17 @@ export async function submitStoreRegistration(
   );
   return { message: json.message };
 }
+
+/** 앱 활성(DAU) 기록. client_id 기준 서버에 일 1회 upsert */
+export async function reportAppOpen(): Promise<{ day: string }> {
+  const clientId = await getClientId();
+  const json = await request<{ data: { ok: boolean; day: string } }>(
+    '/api/analytics/app-open',
+    {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ client_id: clientId }),
+    }
+  );
+  return { day: json.data.day };
+}

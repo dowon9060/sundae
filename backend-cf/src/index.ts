@@ -4,6 +4,7 @@ import type { Env } from './types';
 import { clearRateLimitBuckets, rateLimit } from './middleware/rateLimit';
 import stores from './routes/stores';
 import locations from './routes/locations';
+import analytics from './routes/analytics';
 import admin from './routes/admin';
 import adminAuth from './routes/adminAuth';
 
@@ -62,9 +63,14 @@ app.use(
   '/api/stores/:id/likes',
   rateLimit({ name: 'like', windowMs: 60_000, max: 30, durable: true })
 );
+app.use(
+  '/api/analytics/app-open',
+  rateLimit({ name: 'app-open', windowMs: 60_000, max: 10, durable: true })
+);
 
 app.route('/api/stores', stores);
 app.route('/api/locations', locations);
+app.route('/api/analytics', analytics);
 app.route('/api/admin/auth', adminAuth);
 app.route('/api/admin', admin);
 

@@ -59,6 +59,8 @@ npm start
 | GET | `/api/locations/search?q` | 주소/역 검색 (MVP 정적 후보) |
 | POST | `/api/stores/:id/reports` | 정보 제보 (사유 + 메모) |
 | POST | `/api/stores/registration-requests` | 순대차 등록 요청 (이름·메뉴·오늘날·위치·사진) |
+| POST | `/api/analytics/app-open` | 앱 활성 기록 (`client_id`, KST 일 1회 upsert) |
+| GET | `/api/admin/analytics/overview?days` | DAU/MAU·일자별 시리즈 (`X-Admin-Key`) |
 | PATCH | `/api/admin/stores/:id/location` | 위치 갱신 |
 | PATCH | `/api/admin/stores/:id/hours` | 운영시간 갱신 |
 

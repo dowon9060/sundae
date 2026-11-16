@@ -6,6 +6,7 @@ import {
   isValidEmail,
   updateAdminProfile,
 } from '../services/admins';
+import { getAnalyticsOverview } from '../services/analytics';
 import {
   createStore,
   getAdminStoreDetail,
@@ -126,6 +127,25 @@ admin.patch('/me', async (c) => {
 admin.get('/regions', async (c) => {
   const data = await listRegionsWithCounts(c.env);
   return c.json({ data });
+});
+
+admin.get('/analytics/overview', async (c) => {
+  const raw = Number(c.req.query('days') || '30');
+  const days = Number.isFinite(raw) ? raw : 30;
+  try {
+    const data = await getAnalyticsOverview(c.env, days);
+    return c.json({ data });
+  } catch (err) {
+    const detail = err instanceof Error ? err.message : 'unknown';
+    console.error(
+      JSON.stringify({
+        level: 'error',
+        message: 'admin_analytics_overview_failed',
+        detail,
+      })
+    );
+    return c.json({ error: '활성 지표를 불러오지 못했습니다.' }, 500);
+  }
 });
 
 admin.get('/registration-requests', async (c) => {

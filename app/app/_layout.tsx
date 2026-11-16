@@ -11,6 +11,7 @@ import { StatusBar } from 'expo-status-bar';
 import { AppSplash } from '../components/AppSplash';
 import { colors, fonts } from '../constants/theme';
 import { LocationProvider } from '../context/LocationContext';
+import { trackAppOpenOncePerDay } from '../services/appOpen';
 
 export { ErrorBoundary } from 'expo-router';
 
@@ -54,6 +55,11 @@ export default function RootLayout() {
       cancelled = true;
     };
   }, [fontsLoaded, minTimeDone]);
+
+  useEffect(() => {
+    if (!splashDone) return;
+    void trackAppOpenOncePerDay();
+  }, [splashDone]);
 
   const showSplash = !splashDone;
 
