@@ -7,6 +7,7 @@ export type StoreCategory =
   | 'chicken'
   | 'gopchang'
   | 'hotteok'
+  | 'hoe'
   | 'other'
   | 'all';
 export type BusinessStatus = 'expected' | 'confirmed_open' | 'unknown';
@@ -83,6 +84,7 @@ export const CATEGORY_LABELS: Record<Exclude<StoreCategory, 'all'>, string> = {
   chicken: '치킨',
   gopchang: '곱창',
   hotteok: '호떡',
+  hoe: '회',
   other: '기타',
 };
 

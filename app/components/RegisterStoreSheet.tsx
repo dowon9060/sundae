@@ -50,6 +50,7 @@ const CATEGORY_KEYS: Exclude<StoreCategory, 'all'>[] = [
   'chicken',
   'gopchang',
   'hotteok',
+  'hoe',
   'other',
 ];
 

@@ -18,6 +18,7 @@ const STORE_CATEGORIES = new Set<StoreCategory>([
   'chicken',
   'gopchang',
   'hotteok',
+  'hoe',
   'other',
 ]);
 

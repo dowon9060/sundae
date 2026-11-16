@@ -7,6 +7,7 @@ export type StoreCategory =
   | 'chicken'
   | 'gopchang'
   | 'hotteok'
+  | 'hoe'
   | 'other';
 export type BusinessStatus = 'expected' | 'confirmed_open' | 'unknown';
 export type StoreStatus = 'active' | 'inactive';
