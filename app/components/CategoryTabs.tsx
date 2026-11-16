@@ -1,4 +1,12 @@
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import {
+  Image,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  View,
+} from 'react-native';
+import { CATEGORY_CHIP_IMAGES } from '../constants/categoryImages';
 import { colors, layout, spacing, typography } from '../constants/theme';
 import { CATEGORY_LABELS, type StoreCategory } from '../types/store';
 
@@ -45,19 +53,35 @@ export function CategoryTabs({ value, onChange, onPressMap }: Props) {
         ) : null}
         {TABS.map((tab) => {
           const active = value === tab.key;
+          const image =
+            tab.key === 'all' ? undefined : CATEGORY_CHIP_IMAGES[tab.key];
           return (
             <Pressable
               key={tab.key}
-              style={[styles.chip, active && styles.chipActive]}
+              style={[
+                image ? styles.imageChip : styles.chip,
+                active && (image ? styles.imageChipActive : styles.chipActive),
+              ]}
               onPress={() => onChange(tab.key)}
+              accessibilityRole="button"
+              accessibilityLabel={tab.label}
+              accessibilityState={{ selected: active }}
             >
-              <Text
-                style={[styles.label, active && styles.labelActive]}
-                allowFontScaling
-                maxFontSizeMultiplier={1.35}
-              >
-                {tab.label}
-              </Text>
+              {image ? (
+                <Image
+                  source={image}
+                  style={styles.chipImage}
+                  resizeMode="contain"
+                />
+              ) : (
+                <Text
+                  style={[styles.label, active && styles.labelActive]}
+                  allowFontScaling
+                  maxFontSizeMultiplier={1.35}
+                >
+                  {tab.label}
+                </Text>
+              )}
             </Pressable>
           );
         })}
@@ -94,6 +118,26 @@ const styles = StyleSheet.create({
   chipActive: {
     backgroundColor: colors.chipActive,
     borderColor: colors.chipBorderActive,
+  },
+  imageChip: {
+    width: 52,
+    height: 52,
+    borderRadius: 16,
+    backgroundColor: colors.chip,
+    borderWidth: 1,
+    borderColor: colors.chipBorder,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 4,
+  },
+  imageChipActive: {
+    backgroundColor: colors.chipActive,
+    borderColor: colors.chipBorderActive,
+    borderWidth: 2,
+  },
+  chipImage: {
+    width: 40,
+    height: 40,
   },
   label: {
     ...typography.chip,
