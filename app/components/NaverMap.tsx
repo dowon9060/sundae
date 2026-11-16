@@ -10,6 +10,7 @@ import { WebView, type WebViewMessageEvent } from 'react-native-webview';
 import {
   CATEGORY_MARKER_COLORS,
   CATEGORY_MARKER_EMOJI,
+  CATEGORY_MARKER_IMAGE,
   DEFAULT_TRUCK_MARKER_URI,
   type MapStoreCategory,
 } from '../constants/mapMarkerIcons';
@@ -71,7 +72,8 @@ function buildHtml(
   markers: MapMarker[],
   markerIconUri: string,
   categoryEmoji: Record<string, string>,
-  categoryColors: Record<string, string>
+  categoryColors: Record<string, string>,
+  categoryImages: Record<string, string>
 ) {
   const markerPayload = JSON.stringify(
     centerPin
@@ -129,6 +131,7 @@ function buildHtml(
     var truckIconUri = ${JSON.stringify(markerIconUri)};
     var categoryEmoji = ${JSON.stringify(categoryEmoji)};
     var categoryColors = ${JSON.stringify(categoryColors)};
+    var categoryImages = ${JSON.stringify(categoryImages)};
     var map = null;
     var marker = null;
     var markers = [];
@@ -174,6 +177,7 @@ function buildHtml(
     function pinIcon(text, category) {
       var cat = category || 'other';
       var emoji = categoryEmoji[cat] || '';
+      var imageUri = categoryImages[cat] || '';
       var border = categoryColors[cat] || '#2FBF5B';
       var label = text
         ? '<div style="margin-top:3px;max-width:110px;padding:3px 7px;border-radius:8px;background:#fff;color:#111;font:600 11px/1.2 sans-serif;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;box-shadow:0 2px 8px rgba(0,0,0,.14);">' +
@@ -181,7 +185,15 @@ function buildHtml(
           '</div>'
         : '';
       var badge;
-      if (emoji) {
+      if (imageUri) {
+        badge =
+          '<div style="width:52px;height:52px;border-radius:16px;margin:0 auto;background:#FFF9E8;' +
+          'border:2px solid ' + border + ';box-shadow:0 3px 10px rgba(0,0,0,.28);' +
+          'display:flex;align-items:center;justify-content:center;overflow:hidden;">' +
+          '<img src="' + imageUri + '" width="44" height="44" alt="" ' +
+          'style="width:44px;height:44px;display:block;" />' +
+          '</div>';
+      } else if (emoji) {
         badge =
           '<div style="width:48px;height:48px;border-radius:14px;margin:0 auto;background:#fff;' +
           'border:2px solid ' + border + ';box-shadow:0 3px 10px rgba(0,0,0,.28);' +
@@ -422,7 +434,8 @@ export function NaverMap({
             markers ?? [],
             DEFAULT_TRUCK_MARKER_URI,
             CATEGORY_MARKER_EMOJI,
-            CATEGORY_MARKER_COLORS
+            CATEGORY_MARKER_COLORS,
+            CATEGORY_MARKER_IMAGE
           )
         : '',
     // 초기 HTML만 — 이후 마커는 inject 로 갱신 (카메라 유지)
