@@ -114,8 +114,6 @@ export default function HomeScreen() {
       <RegisterStoreCard onPress={() => setRegisterOpen(true)} />
       <RegisterStoreSheet
         visible={registerOpen}
-        defaultLat={location?.lat}
-        defaultLng={location?.lng}
         onClose={() => setRegisterOpen(false)}
       />
       {location ? (

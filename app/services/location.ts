@@ -90,6 +90,30 @@ function withTimeout<T>(promise: Promise<T>, ms: number, label: string): Promise
   });
 }
 
+/** 저장 위치를 바꾸지 않고 현재 GPS 좌표만 가져온다. 권한 거부 시 null */
+export async function getCurrentGpsCoords(): Promise<{
+  lat: number;
+  lng: number;
+} | null> {
+  const { status } = await ExpoLocation.requestForegroundPermissionsAsync();
+  if (status !== 'granted') {
+    return null;
+  }
+
+  const position = await withTimeout(
+    ExpoLocation.getCurrentPositionAsync({
+      accuracy: ExpoLocation.Accuracy.High,
+    }),
+    GPS_TIMEOUT_MS,
+    '위치 확인'
+  );
+
+  return {
+    lat: position.coords.latitude,
+    lng: position.coords.longitude,
+  };
+}
+
 export async function requestGpsLocation(): Promise<SavedLocation | null> {
   const { status } = await ExpoLocation.requestForegroundPermissionsAsync();
   if (status !== 'granted') {

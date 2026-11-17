@@ -1,4 +1,4 @@
-import { useEffect, useState, type ReactNode } from 'react';
+import { useEffect, useMemo, useState, type ReactNode } from 'react';
 import {
   ActivityIndicator,
   Alert,
@@ -18,7 +18,10 @@ import * as ImagePicker from 'expo-image-picker';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { colors, fonts, layout, spacing } from '../constants/theme';
 import { submitStoreRegistration } from '../services/api';
+import { getCurrentGpsCoords } from '../services/location';
 import { CATEGORY_LABELS, type StoreCategory } from '../types/store';
+import { LocationMapPicker } from './LocationMapPicker';
+import { NaverMap, type MapMarker } from './NaverMap';
 
 type PhotoKey = 'menu' | 'location' | 'truck';
 type CategoryKey = Exclude<StoreCategory, 'all'>;
@@ -28,10 +31,13 @@ interface PhotoState {
   dataUrl: string;
 }
 
+interface Coord {
+  lat: number;
+  lng: number;
+}
+
 interface Props {
   visible: boolean;
-  defaultLat?: number;
-  defaultLng?: number;
   onClose: () => void;
 }
 
@@ -86,18 +92,16 @@ function buildTodayHours(days: number[], timeText: string): string {
   return dayPart || timePart;
 }
 
-export function RegisterStoreSheet({
-  visible,
-  defaultLat,
-  defaultLng,
-  onClose,
-}: Props) {
+export function RegisterStoreSheet({ visible, onClose }: Props) {
   const [name, setName] = useState('');
   const [category, setCategory] = useState<CategoryKey | null>(null);
   const [menu, setMenu] = useState('');
   const [selectedDays, setSelectedDays] = useState<number[]>([]);
   const [timeText, setTimeText] = useState('');
   const [locationText, setLocationText] = useState('');
+  const [pickedCoord, setPickedCoord] = useState<Coord | null>(null);
+  const [pickerStart, setPickerStart] = useState<Coord | null>(null);
+  const [gpsLoading, setGpsLoading] = useState(false);
   const [photos, setPhotos] = useState<Partial<Record<PhotoKey, PhotoState>>>(
     {}
   );
@@ -113,11 +117,51 @@ export function RegisterStoreSheet({
     setSelectedDays([]);
     setTimeText('');
     setLocationText('');
+    setPickedCoord(null);
+    setPickerStart(null);
+    setGpsLoading(false);
     setPhotos({});
     setSubmitting(false);
     setError(null);
     setDoneMessage(null);
   }, [visible]);
+
+  const previewMarkers = useMemo<MapMarker[]>(
+    () =>
+      pickedCoord
+        ? [
+            {
+              lat: pickedCoord.lat,
+              lng: pickedCoord.lng,
+              kind: 'store',
+              category: category ?? 'other',
+            },
+          ]
+        : [],
+    [pickedCoord, category]
+  );
+
+  const selectCurrentLocation = async () => {
+    if (gpsLoading) return;
+    setGpsLoading(true);
+    setError(null);
+    try {
+      const gps = await getCurrentGpsCoords();
+      if (!gps) {
+        setError('위치 권한이 필요합니다. 설정에서 위치 접근을 허용해 주세요.');
+        return;
+      }
+      setPickerStart(gps);
+    } catch (e) {
+      setError(
+        e instanceof Error
+          ? e.message
+          : '현재 위치를 가져오지 못했습니다. 잠시 후 다시 시도해 주세요.'
+      );
+    } finally {
+      setGpsLoading(false);
+    }
+  };
 
   const toggleDay = (day: number) => {
     setSelectedDays((prev) =>
@@ -221,6 +265,7 @@ export function RegisterStoreSheet({
       Boolean(menu.trim()) ||
       Boolean(todayHours) ||
       Boolean(locationText.trim()) ||
+      pickedCoord != null ||
       Boolean(photos.menu || photos.location || photos.truck);
 
     if (!hasAnything) {
@@ -237,8 +282,8 @@ export function RegisterStoreSheet({
         menu: menu.trim(),
         today_hours: todayHours,
         location_text: locationText.trim(),
-        lat: defaultLat ?? null,
-        lng: defaultLng ?? null,
+        lat: pickedCoord?.lat ?? null,
+        lng: pickedCoord?.lng ?? null,
         photo_menu: photos.menu?.dataUrl ?? null,
         photo_location: photos.location?.dataUrl ?? null,
         photo_truck: photos.truck?.dataUrl ?? null,
@@ -375,6 +420,42 @@ export function RegisterStoreSheet({
                   placeholder="예: 강남역 2번 출구 앞"
                   placeholderTextColor={colors.textMuted}
                 />
+                <Pressable
+                  style={[styles.gpsBtn, gpsLoading && styles.submitDisabled]}
+                  disabled={gpsLoading}
+                  onPress={() => void selectCurrentLocation()}
+                >
+                  {gpsLoading ? (
+                    <ActivityIndicator color={colors.text} />
+                  ) : (
+                    <Text style={styles.gpsBtnText}>현위치로 선택</Text>
+                  )}
+                </Pressable>
+                {pickedCoord ? (
+                  <View style={styles.preview}>
+                    <NaverMap
+                      key={`reg-${pickedCoord.lat.toFixed(6)}-${pickedCoord.lng.toFixed(6)}`}
+                      lat={pickedCoord.lat}
+                      lng={pickedCoord.lng}
+                      zoom={16}
+                      navigable={false}
+                      lockCenter
+                      markers={previewMarkers}
+                      style={styles.previewMap}
+                    />
+                    <Pressable
+                      style={styles.previewHit}
+                      onPress={() => setPickerStart(pickedCoord)}
+                    >
+                      <View style={styles.previewOverlay}>
+                        <Text style={styles.previewCoord} numberOfLines={1}>
+                          {pickedCoord.lat.toFixed(6)}, {pickedCoord.lng.toFixed(6)}
+                        </Text>
+                        <Text style={styles.previewCta}>위치 수정</Text>
+                      </View>
+                    </Pressable>
+                  </View>
+                ) : null}
               </Field>
 
               <Text style={styles.photoSection}>사진 첨부</Text>
@@ -418,6 +499,23 @@ export function RegisterStoreSheet({
             </ScrollView>
           </KeyboardAvoidingView>
         )}
+        {pickerStart ? (
+          <LocationMapPicker
+            visible
+            initialLat={pickerStart.lat}
+            initialLng={pickerStart.lng}
+            title="판매 위치 선택"
+            hint="지도를 움직여 핀을 순대차 위치에 맞춘 뒤 선택하세요."
+            pinLabel="순대차 위치"
+            confirmLabel="이 위치로 선택"
+            onClose={() => setPickerStart(null)}
+            onConfirm={(lat, lng, address) => {
+              setPickedCoord({ lat, lng });
+              setLocationText(address);
+              setPickerStart(null);
+            }}
+          />
+        ) : null}
       </SafeAreaView>
     </Modal>
   );
@@ -483,6 +581,54 @@ const styles = StyleSheet.create({
     fontSize: 15,
     color: colors.text,
     backgroundColor: colors.surface,
+  },
+  gpsBtn: {
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: colors.surface,
+    paddingVertical: 12,
+    alignItems: 'center',
+  },
+  gpsBtnText: {
+    fontFamily: fonts.medium,
+    color: colors.text,
+    fontSize: 14,
+  },
+  preview: {
+    height: 160,
+    borderRadius: 12,
+    overflow: 'hidden',
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: colors.mapPlaceholder,
+  },
+  previewMap: {
+    ...StyleSheet.absoluteFill,
+  },
+  previewHit: {
+    ...StyleSheet.absoluteFill,
+    justifyContent: 'flex-end',
+  },
+  previewOverlay: {
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+    backgroundColor: 'rgba(255,255,255,0.92)',
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 8,
+  },
+  previewCoord: {
+    flex: 1,
+    fontFamily: fonts.regular,
+    color: colors.textSecondary,
+    fontSize: 12,
+  },
+  previewCta: {
+    fontFamily: fonts.bold,
+    color: colors.accent,
+    fontSize: 13,
   },
   categoryRow: {
     flexDirection: 'row',

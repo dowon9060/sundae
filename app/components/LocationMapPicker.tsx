@@ -24,6 +24,10 @@ interface Props {
   visible: boolean;
   initialLat: number;
   initialLng: number;
+  title?: string;
+  hint?: string;
+  pinLabel?: string;
+  confirmLabel?: string;
   onClose: () => void;
   onConfirm: (lat: number, lng: number, address: string) => void | Promise<void>;
 }
@@ -32,6 +36,10 @@ export function LocationMapPicker({
   visible,
   initialLat,
   initialLng,
+  title = '지도에서 위치 선택',
+  hint = '지도를 움직이면 중앙의 내 위치가 바뀝니다. 멈춘 뒤 주소를 확인하고 설정하세요.',
+  pinLabel = '내 위치',
+  confirmLabel = '이 위치로 내 위치 설정',
   onClose,
   onConfirm,
 }: Props) {
@@ -115,16 +123,13 @@ export function LocationMapPicker({
     <Modal visible={visible} animationType="slide" presentationStyle="fullScreen">
       <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
         <View style={styles.header}>
-          <Text style={styles.title}>지도에서 위치 선택</Text>
+          <Text style={styles.title}>{title}</Text>
           <Pressable onPress={onClose} hitSlop={8}>
             <Text style={styles.close}>닫기</Text>
           </Pressable>
         </View>
 
-        <Text style={styles.hint}>
-          지도를 움직이면 중앙의 내 위치가 바뀝니다. 멈춘 뒤 주소를 확인하고
-          설정하세요.
-        </Text>
+        <Text style={styles.hint}>{hint}</Text>
 
         <View style={styles.mapWrap}>
           {visible ? (
@@ -135,7 +140,7 @@ export function LocationMapPicker({
               zoom={16}
               navigable
               centerPin
-              centerPinLabel="내 위치"
+              centerPinLabel={pinLabel}
               centerPinTone="user"
               lockCenter
               onPick={applyCenter}
@@ -173,7 +178,7 @@ export function LocationMapPicker({
             {saving ? (
               <ActivityIndicator color="#FFFFFF" />
             ) : (
-              <Text style={styles.confirmText}>이 위치로 내 위치 설정</Text>
+              <Text style={styles.confirmText}>{confirmLabel}</Text>
             )}
           </Pressable>
         </View>
