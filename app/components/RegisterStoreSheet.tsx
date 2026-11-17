@@ -30,7 +30,6 @@ interface PhotoState {
 
 interface Props {
   visible: boolean;
-  defaultLocation?: string;
   defaultLat?: number;
   defaultLng?: number;
   onClose: () => void;
@@ -89,7 +88,6 @@ function buildTodayHours(days: number[], timeText: string): string {
 
 export function RegisterStoreSheet({
   visible,
-  defaultLocation = '',
   defaultLat,
   defaultLng,
   onClose,
@@ -114,12 +112,12 @@ export function RegisterStoreSheet({
     setMenu('');
     setSelectedDays([]);
     setTimeText('');
-    setLocationText(defaultLocation);
+    setLocationText('');
     setPhotos({});
     setSubmitting(false);
     setError(null);
     setDoneMessage(null);
-  }, [visible, defaultLocation]);
+  }, [visible]);
 
   const toggleDay = (day: number) => {
     setSelectedDays((prev) =>
@@ -374,7 +372,7 @@ export function RegisterStoreSheet({
                   style={styles.input}
                   value={locationText}
                   onChangeText={setLocationText}
-                  placeholder="예: 목동 현대아파트"
+                  placeholder="예: 강남역 2번 출구 앞"
                   placeholderTextColor={colors.textMuted}
                 />
               </Field>
