@@ -24,7 +24,7 @@ const STORE_CATEGORIES = new Set<StoreCategory>([
 
 export interface RegistrationInput {
   name?: string | null;
-  category?: StoreCategory | null;
+  category?: StoreCategory | '' | null;
   menu?: string | null;
   today_hours?: string | null;
   location_text?: string | null;
