@@ -18,7 +18,7 @@
     },
     "android": {
       "package": "com.sundaecha.app",
-      "versionCode": 11,
+      "versionCode": 13,
       "adaptiveIcon": {
         "backgroundColor": "#FFF9E8",
         "foregroundImage": "./assets/images/sundea_logo.png",

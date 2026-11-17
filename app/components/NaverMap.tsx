@@ -3,6 +3,7 @@ import {
   StyleSheet,
   Text,
   View,
+  type LayoutChangeEvent,
   type StyleProp,
   type ViewStyle,
 } from 'react-native';
@@ -419,11 +420,18 @@ export function NaverMap({
   const webRef = useRef<WebView>(null);
   const [authFailed, setAuthFailed] = useState(false);
   const [ready, setReady] = useState(false);
+  /** 중앙 핀 높이 — 핀 끝을 지도 중앙에 맞출 때 사용 */
+  const [pinHeight, setPinHeight] = useState(0);
   const markerKey = JSON.stringify(markers ?? []);
   const canNavigate =
     navigable ??
     centerPin ??
     (interactive || (markers != null && markers.length > 0));
+
+  const onPinLayout = (e: LayoutChangeEvent) => {
+    const next = Math.round(e.nativeEvent.layout.height);
+    if (next > 0 && next !== pinHeight) setPinHeight(next);
+  };
 
   const html = useMemo(
     () =>
@@ -567,16 +575,28 @@ export function NaverMap({
       />
       {centerPin ? (
         <View pointerEvents="none" style={styles.centerPinWrap}>
-          <View style={styles.centerPin}>
+          {/*
+            top:50% 기준선에 핀 끝(맨 아래)이 오도록 측정한 높이만큼 위로 올린다.
+            Android에서 absoluteFill+justifyContent center가 아래로 붙는 문제를 피한다.
+          */}
+          <View
+            style={[
+              styles.centerPin,
+              {
+                opacity: pinHeight > 0 ? 1 : 0,
+                transform:
+                  pinHeight > 0 ? [{ translateY: -pinHeight }] : undefined,
+              },
+            ]}
+            onLayout={onPinLayout}
+          >
             {centerPinLabel ? (
               <View style={styles.centerPinLabelWrap}>
                 <Text style={styles.centerPinLabel}>{centerPinLabel}</Text>
               </View>
             ) : null}
             <View style={[styles.pinHead, { backgroundColor: pinColor }]} />
-            <View
-              style={[styles.pinPoint, { borderTopColor: pinColor }]}
-            />
+            <View style={[styles.pinPoint, { borderTopColor: pinColor }]} />
           </View>
         </View>
       ) : null}
@@ -587,22 +607,26 @@ export function NaverMap({
 const styles = StyleSheet.create({
   wrap: {
     flex: 1,
+    position: 'relative',
     overflow: 'hidden',
     backgroundColor: '#F0F0F2',
   },
   web: {
-    flex: 1,
+    ...StyleSheet.absoluteFillObject,
     backgroundColor: 'transparent',
   },
   centerPinWrap: {
-    ...StyleSheet.absoluteFillObject,
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    top: '50%',
+    height: 0,
     alignItems: 'center',
-    justifyContent: 'center',
+    zIndex: 30,
+    elevation: 30,
   },
   centerPin: {
     alignItems: 'center',
-    // 핀 끝(뾰족한 부분)이 지도 정중앙에 오도록 위로 올림
-    transform: [{ translateY: -18 }],
   },
   centerPinLabelWrap: {
     marginBottom: 6,
