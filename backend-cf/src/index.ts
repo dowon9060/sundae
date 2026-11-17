@@ -7,6 +7,7 @@ import locations from './routes/locations';
 import analytics from './routes/analytics';
 import admin from './routes/admin';
 import adminAuth from './routes/adminAuth';
+import { isValidPhotoKey, PHOTO_PATH_PREFIX } from './services/photos';
 
 const app = new Hono<{ Bindings: Env }>();
 
@@ -25,6 +26,25 @@ app.use(
 );
 
 app.get('/health', (c) => c.json({ ok: true, service: 'sundaecha-api' }));
+
+/** 앱 이미지 로딩용 공개 경로 — /api 레이트 리밋 대상에서 제외 */
+app.get(`${PHOTO_PATH_PREFIX}*`, async (c) => {
+  const key = decodeURIComponent(new URL(c.req.url).pathname.slice(PHOTO_PATH_PREFIX.length));
+  if (!isValidPhotoKey(key)) {
+    return c.json({ error: 'Not found' }, 404);
+  }
+  const object = await c.env.PHOTOS.get(key);
+  if (!object) {
+    return c.json({ error: 'Not found' }, 404);
+  }
+  const headers = new Headers();
+  object.writeHttpMetadata(headers);
+  headers.set('etag', object.httpEtag);
+  if (!headers.has('cache-control')) {
+    headers.set('cache-control', 'public, max-age=31536000, immutable');
+  }
+  return new Response(object.body, { headers });
+});
 
 /**
  * 로컬 개발 전용 — ENVIRONMENT=local 일 때만 동작.

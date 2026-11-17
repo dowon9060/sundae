@@ -20,6 +20,8 @@ export type ReportReason =
 
 export interface Env {
   DB: D1Database;
+  /** 어드민 첨부 사진 (R2) */
+  PHOTOS: R2Bucket;
   LOCATION_STALE_DAYS: string;
   /** local | production */
   ENVIRONMENT?: string;

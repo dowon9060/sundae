@@ -17,6 +17,7 @@ import {
   updateStoreHours,
   updateStoreLocation,
 } from '../services/stores';
+import { MAX_PHOTO_BYTES, savePhoto } from '../services/photos';
 
 const admin = new Hono<{ Bindings: Env }>();
 
@@ -361,6 +362,36 @@ admin.patch('/stores/:id/hours', async (c) => {
 
   const data = await updateStoreHours(c.env, id, body.hours);
   return c.json({ data });
+});
+
+const PHOTO_ERROR_MESSAGES: Record<string, string> = {
+  EMPTY_PHOTO: '사진 파일이 비어 있습니다.',
+  PHOTO_TOO_LARGE: '사진은 5MB 이하만 올릴 수 있습니다.',
+  INVALID_PHOTO_TYPE: 'JPG, PNG, WEBP 사진만 올릴 수 있습니다.',
+};
+
+/** 본문: 이미지 바이너리 그대로 (Content-Type: image/*) */
+admin.post('/photos', async (c) => {
+  const declared = Number(c.req.header('Content-Length') || '0');
+  if (declared > MAX_PHOTO_BYTES) {
+    return c.json({ error: PHOTO_ERROR_MESSAGES.PHOTO_TOO_LARGE }, 413);
+  }
+  const email = (c.req.header('X-Admin-Email') || '').trim() || 'unknown';
+  try {
+    const body = await c.req.arrayBuffer();
+    const data = await savePhoto(c.env, body, new URL(c.req.url).origin, email);
+    return c.json({ data }, 201);
+  } catch (err) {
+    const code = err instanceof Error ? err.message : '';
+    const message = PHOTO_ERROR_MESSAGES[code];
+    if (message) {
+      return c.json({ error: message }, code === 'PHOTO_TOO_LARGE' ? 413 : 400);
+    }
+    console.error(
+      JSON.stringify({ level: 'error', message: 'photo_upload_failed', error: String(err) })
+    );
+    return c.json({ error: '사진 업로드에 실패했습니다.' }, 500);
+  }
 });
 
 export default admin;
