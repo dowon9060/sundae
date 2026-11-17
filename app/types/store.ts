@@ -46,6 +46,8 @@ export interface NearbyStore {
 
 export interface StoreDetail extends Omit<NearbyStore, 'distance_m'> {
   distance_m: number | null;
+  /** 판매점 사진 (최대 5장, 첫 장이 photo_url 썸네일) */
+  photo_urls?: string[];
 }
 
 export interface MenuItem {

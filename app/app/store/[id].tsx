@@ -63,9 +63,10 @@ export default function StoreDetailScreen() {
       list.push(resolved);
     };
     push(store?.photo_url);
+    for (const url of store?.photo_urls ?? []) push(url);
     for (const m of menus) push(m.photo_url);
     return list;
-  }, [store?.photo_url, menus]);
+  }, [store?.photo_url, store?.photo_urls, menus]);
 
   useEffect(() => {
     if (!id) return;
@@ -175,6 +176,9 @@ export default function StoreDetailScreen() {
   const previewUrls = [
     ...menus.map((m) => resolveStorePhotoUrl(m.photo_url)),
     storePhoto,
+    ...(store.photo_urls ?? [])
+      .map((url) => resolveStorePhotoUrl(url))
+      .filter((url) => url !== storePhoto),
   ];
 
   const openLightbox = (url: string | null | undefined) => {

@@ -13,6 +13,8 @@ import {
   getStoreById,
   listAdminStores,
   listRegionsWithCounts,
+  MAX_STORE_PHOTOS,
+  normalizePhotoUrls,
   updateStore,
   updateStoreHours,
   updateStoreLocation,
@@ -51,6 +53,20 @@ const CATEGORIES = new Set([
   'other',
 ]);
 const STATUSES = new Set(['active', 'inactive']);
+
+function readPhotoUrls(value: unknown): { urls?: string[]; error?: string } {
+  if (value === undefined) return {};
+  try {
+    return { urls: normalizePhotoUrls(value) };
+  } catch (err) {
+    return {
+      error:
+        err instanceof Error && err.message === 'TOO_MANY_PHOTOS'
+          ? `사진은 최대 ${MAX_STORE_PHOTOS}장까지 등록할 수 있습니다.`
+          : 'photo_urls가 올바르지 않습니다.',
+    };
+  }
+}
 const BUSINESS_STATUSES = new Set(['expected', 'confirmed_open', 'unknown']);
 
 admin.use('*', async (c, next) => {
@@ -205,6 +221,7 @@ admin.post('/stores', async (c) => {
     address?: string;
     description?: string | null;
     photo_url?: string | null;
+    photo_urls?: unknown;
     location_note?: string | null;
     business_status?: string;
     status?: string;
@@ -238,6 +255,8 @@ admin.post('/stores', async (c) => {
   if (body.status && !STATUSES.has(body.status)) {
     return c.json({ error: 'status가 올바르지 않습니다.' }, 400);
   }
+  const photos = readPhotoUrls(body.photo_urls);
+  if (photos.error) return c.json({ error: photos.error }, 400);
 
   const data = await createStore(c.env, {
     name: body.name,
@@ -247,6 +266,7 @@ admin.post('/stores', async (c) => {
     address: body.address,
     description: body.description,
     photo_url: body.photo_url,
+    photo_urls: photos.urls,
     location_note: body.location_note,
     business_status: body.business_status as BusinessStatus | undefined,
     status: body.status as StoreStatus | undefined,
@@ -263,6 +283,7 @@ admin.patch('/stores/:id', async (c) => {
     category?: string;
     description?: string | null;
     photo_url?: string | null;
+    photo_urls?: unknown;
     status?: string;
     business_status?: string;
     lat?: number;
@@ -287,6 +308,8 @@ admin.patch('/stores/:id', async (c) => {
   if (body.lng != null && (typeof body.lng !== 'number' || body.lng < -180 || body.lng > 180)) {
     return c.json({ error: 'lng가 올바르지 않습니다.' }, 400);
   }
+  const photos = readPhotoUrls(body.photo_urls);
+  if (photos.error) return c.json({ error: photos.error }, 400);
 
   try {
     const data = await updateStore(c.env, id, {
@@ -294,6 +317,7 @@ admin.patch('/stores/:id', async (c) => {
       category: body.category as StoreCategory | undefined,
       description: body.description,
       photo_url: body.photo_url,
+      photo_urls: photos.urls,
       status: body.status as StoreStatus | undefined,
       business_status: body.business_status as BusinessStatus | undefined,
       lat: body.lat,

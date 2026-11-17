@@ -16,6 +16,53 @@ import { getVerifiedStoreIds } from './verifications';
 
 const DAY_LABELS = ['일', '월', '화', '수', '목', '금', '토'];
 
+export const MAX_STORE_PHOTOS = 5;
+const MAX_PHOTO_URL_LENGTH = 1000;
+
+/** 저장된 JSON 배열을 읽고, 없으면 기존 photo_url 한 장으로 대체 */
+export function parsePhotoUrls(
+  raw: string | null | undefined,
+  fallback: string | null | undefined
+): string[] {
+  if (raw) {
+    try {
+      const parsed: unknown = JSON.parse(raw);
+      if (Array.isArray(parsed)) {
+        return parsed
+          .filter((v): v is string => typeof v === 'string' && v.trim() !== '')
+          .slice(0, MAX_STORE_PHOTOS);
+      }
+    } catch {
+      // 손상된 값은 fallback 사용
+    }
+  }
+  return fallback?.trim() ? [fallback.trim()] : [];
+}
+
+export function normalizePhotoUrls(input: unknown): string[] {
+  if (!Array.isArray(input)) throw new Error('INVALID_PHOTO_URLS');
+  const seen = new Set<string>();
+  const urls: string[] = [];
+  for (const value of input) {
+    if (typeof value !== 'string') throw new Error('INVALID_PHOTO_URLS');
+    const url = value.trim();
+    if (!url) continue;
+    if (url.length > MAX_PHOTO_URL_LENGTH || !/^https?:\/\//i.test(url)) {
+      throw new Error('INVALID_PHOTO_URLS');
+    }
+    if (seen.has(url)) continue;
+    seen.add(url);
+    urls.push(url);
+  }
+  if (urls.length > MAX_STORE_PHOTOS) throw new Error('TOO_MANY_PHOTOS');
+  return urls;
+}
+
+function omitPhotoUrls<T extends { photo_urls?: unknown }>(row: T): Omit<T, 'photo_urls'> {
+  const { photo_urls: _omit, ...rest } = row;
+  return rest;
+}
+
 /** Workers UTC 기준 → 한국(Asia/Seoul) 요일·날짜 */
 function seoulCalendar() {
   const parts = new Intl.DateTimeFormat('en-CA', {
@@ -284,7 +331,7 @@ export async function listNearbyStores(
     const menu_summary = menuSummariesByStore.get(row.id) ?? null;
 
     results.push({
-      ...row,
+      ...omitPhotoUrls(row),
       distance_m: row.distance_m,
       location_stale: row.location_stale,
       menu_summary,
@@ -376,6 +423,7 @@ export async function getStoreById(
 
   return {
     ...row,
+    photo_urls: parsePhotoUrls(row.photo_urls, row.photo_url),
     distance_m,
     location_stale: isLocationStale(row.location_updated_at, staleDays),
   };
@@ -627,7 +675,7 @@ export async function listAdminStores(
     >();
 
   const items: AdminStoreListItem[] = (rows.results ?? []).map((row) => ({
-    ...row,
+    ...omitPhotoUrls(row),
     region: extractRegion(row.address),
     like_count: Number(row.like_count ?? 0),
   }));
@@ -657,6 +705,8 @@ export type CreateStoreInput = {
   address: string;
   description?: string | null;
   photo_url?: string | null;
+  /** 순서대로 최대 5장, 첫 장이 photo_url(썸네일)이 된다 */
+  photo_urls?: string[];
   location_note?: string | null;
   business_status?: BusinessStatus;
   status?: StoreStatus;
@@ -673,17 +723,20 @@ export async function createStore(env: Env, input: CreateStoreInput) {
   const id = `store-${crypto.randomUUID()}`;
   const businessStatus = input.business_status ?? 'unknown';
   const status = input.status ?? 'active';
+  const photoUrls =
+    input.photo_urls ?? (input.photo_url?.trim() ? [input.photo_url.trim()] : []);
 
   await env.DB.prepare(
-    `INSERT INTO stores (id, name, category, description, photo_url, status, business_status, created_at)
-     VALUES (?, ?, ?, ?, ?, ?, ?, datetime('now'))`
+    `INSERT INTO stores (id, name, category, description, photo_url, photo_urls, status, business_status, created_at)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, datetime('now'))`
   )
     .bind(
       id,
       input.name.trim(),
       input.category,
       input.description?.trim() || null,
-      input.photo_url?.trim() || null,
+      photoUrls[0] ?? null,
+      photoUrls.length ? JSON.stringify(photoUrls) : null,
       status,
       businessStatus
     )
@@ -729,6 +782,7 @@ export type UpdateStoreInput = {
   category?: StoreCategory;
   description?: string | null;
   photo_url?: string | null;
+  photo_urls?: string[];
   status?: StoreStatus;
   business_status?: BusinessStatus;
   lat?: number;
@@ -763,9 +817,16 @@ export async function updateStore(
     fields.push('description = ?');
     binds.push(input.description?.trim() || null);
   }
-  if (input.photo_url !== undefined) {
-    fields.push('photo_url = ?');
-    binds.push(input.photo_url?.trim() || null);
+  if (input.photo_urls !== undefined) {
+    fields.push('photo_url = ?', 'photo_urls = ?');
+    binds.push(
+      input.photo_urls[0] ?? null,
+      input.photo_urls.length ? JSON.stringify(input.photo_urls) : null
+    );
+  } else if (input.photo_url !== undefined) {
+    const url = input.photo_url?.trim() || null;
+    fields.push('photo_url = ?', 'photo_urls = ?');
+    binds.push(url, url ? JSON.stringify([url]) : null);
   }
   if (input.status != null) {
     fields.push('status = ?');

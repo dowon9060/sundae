@@ -51,6 +51,8 @@ export interface StoreRow {
   category: StoreCategory;
   description: string | null;
   photo_url: string | null;
+  /** JSON 배열 문자열 — 응답 시 parsePhotoUrls로 변환 */
+  photo_urls?: string | null;
   status: StoreStatus;
   business_status: BusinessStatus;
   created_at: string;
