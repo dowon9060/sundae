@@ -121,11 +121,11 @@ export async function notifyStoreRegistration(
 
   const text = [
     '[순대차 등록 요청]',
-    `이름: ${payload.name}`,
-    `카테고리: ${payload.category}`,
-    `메뉴: ${payload.menu}`,
-    `오늘 운영: ${payload.todayHours}`,
-    `위치: ${payload.locationText}`,
+    `이름: ${payload.name || '(없음)'}`,
+    `카테고리: ${payload.category || '(없음)'}`,
+    `메뉴: ${payload.menu || '(없음)'}`,
+    `운영: ${payload.todayHours || '(없음)'}`,
+    `위치: ${payload.locationText || '(없음)'}`,
     payload.lat != null && payload.lng != null
       ? `좌표: ${payload.lat}, ${payload.lng}`
       : '좌표: (없음)',

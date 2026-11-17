@@ -16,11 +16,12 @@ import {
 import * as ImageManipulator from 'expo-image-manipulator';
 import * as ImagePicker from 'expo-image-picker';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { colors, fonts, layout, spacing, typography } from '../constants/theme';
+import { colors, fonts, layout, spacing } from '../constants/theme';
 import { submitStoreRegistration } from '../services/api';
 import { CATEGORY_LABELS, type StoreCategory } from '../types/store';
 
 type PhotoKey = 'menu' | 'location' | 'truck';
+type CategoryKey = Exclude<StoreCategory, 'all'>;
 
 interface PhotoState {
   uri: string;
@@ -37,11 +38,11 @@ interface Props {
 
 const PHOTO_LABELS: Record<PhotoKey, string> = {
   menu: '메뉴',
-  location: '위치캡쳐',
+  location: '위치',
   truck: '푸드트럭',
 };
 
-const CATEGORY_KEYS: Exclude<StoreCategory, 'all'>[] = [
+const CATEGORY_KEYS: CategoryKey[] = [
   'sundae',
   'bungeoppang',
   'dakkochi',
@@ -52,6 +53,17 @@ const CATEGORY_KEYS: Exclude<StoreCategory, 'all'>[] = [
   'hotteok',
   'hoe',
   'other',
+];
+
+/** 월~일 순서 */
+const WEEK_DAYS: { key: number; label: string }[] = [
+  { key: 1, label: '월' },
+  { key: 2, label: '화' },
+  { key: 3, label: '수' },
+  { key: 4, label: '목' },
+  { key: 5, label: '금' },
+  { key: 6, label: '토' },
+  { key: 0, label: '일' },
 ];
 
 async function toCompressedDataUrl(uri: string): Promise<string> {
@@ -66,6 +78,15 @@ async function toCompressedDataUrl(uri: string): Promise<string> {
   return `data:image/jpeg;base64,${manipulated.base64}`;
 }
 
+function buildTodayHours(days: number[], timeText: string): string {
+  const dayPart = WEEK_DAYS.filter((d) => days.includes(d.key))
+    .map((d) => d.label)
+    .join(' ');
+  const timePart = timeText.trim();
+  if (dayPart && timePart) return `${dayPart} ${timePart}`;
+  return dayPart || timePart;
+}
+
 export function RegisterStoreSheet({
   visible,
   defaultLocation = '',
@@ -74,10 +95,10 @@ export function RegisterStoreSheet({
   onClose,
 }: Props) {
   const [name, setName] = useState('');
-  const [category, setCategory] =
-    useState<Exclude<StoreCategory, 'all'>>('sundae');
+  const [category, setCategory] = useState<CategoryKey | null>(null);
   const [menu, setMenu] = useState('');
-  const [todayHours, setTodayHours] = useState('');
+  const [selectedDays, setSelectedDays] = useState<number[]>([]);
+  const [timeText, setTimeText] = useState('');
   const [locationText, setLocationText] = useState('');
   const [photos, setPhotos] = useState<Partial<Record<PhotoKey, PhotoState>>>(
     {}
@@ -89,15 +110,22 @@ export function RegisterStoreSheet({
   useEffect(() => {
     if (!visible) return;
     setName('');
-    setCategory('sundae');
+    setCategory(null);
     setMenu('');
-    setTodayHours('');
+    setSelectedDays([]);
+    setTimeText('');
     setLocationText(defaultLocation);
     setPhotos({});
     setSubmitting(false);
     setError(null);
     setDoneMessage(null);
   }, [visible, defaultLocation]);
+
+  const toggleDay = (day: number) => {
+    setSelectedDays((prev) =>
+      prev.includes(day) ? prev.filter((d) => d !== day) : [...prev, day]
+    );
+  };
 
   const pickPhoto = async (key: PhotoKey) => {
     setError(null);
@@ -164,9 +192,23 @@ export function RegisterStoreSheet({
   };
 
   const choosePhotoSource = (key: PhotoKey) => {
-    Alert.alert(PHOTO_LABELS[key] + ' 사진', '첨부 방법을 선택해 주세요.', [
+    Alert.alert(`${PHOTO_LABELS[key]} 사진 첨부`, '첨부 방법을 선택해 주세요.', [
       { text: '앨범', onPress: () => void pickPhoto(key) },
       { text: '촬영', onPress: () => void takePhoto(key) },
+      ...(photos[key]
+        ? [
+            {
+              text: '삭제',
+              style: 'destructive' as const,
+              onPress: () =>
+                setPhotos((prev) => {
+                  const next = { ...prev };
+                  delete next[key];
+                  return next;
+                }),
+            },
+          ]
+        : []),
       { text: '취소', style: 'cancel' },
     ]);
   };
@@ -174,24 +216,17 @@ export function RegisterStoreSheet({
   const onSubmit = async () => {
     if (submitting) return;
 
-    if (!name.trim()) {
-      setError('이름을 입력해 주세요.');
-      return;
-    }
-    if (!category) {
-      setError('카테고리를 선택해 주세요.');
-      return;
-    }
-    if (!menu.trim()) {
-      setError('메뉴를 입력해 주세요.');
-      return;
-    }
-    if (!todayHours.trim()) {
-      setError('오늘 운영 시간을 입력해 주세요.');
-      return;
-    }
-    if (!locationText.trim()) {
-      setError('위치를 입력해 주세요.');
+    const todayHours = buildTodayHours(selectedDays, timeText);
+    const hasAnything =
+      Boolean(name.trim()) ||
+      category != null ||
+      Boolean(menu.trim()) ||
+      Boolean(todayHours) ||
+      Boolean(locationText.trim()) ||
+      Boolean(photos.menu || photos.location || photos.truck);
+
+    if (!hasAnything) {
+      setError('내용을 하나 이상 입력해 주세요.');
       return;
     }
 
@@ -200,9 +235,9 @@ export function RegisterStoreSheet({
     try {
       const result = await submitStoreRegistration({
         name: name.trim(),
-        category,
+        category: category ?? null,
         menu: menu.trim(),
-        today_hours: todayHours.trim(),
+        today_hours: todayHours,
         location_text: locationText.trim(),
         lat: defaultLat ?? null,
         lng: defaultLng ?? null,
@@ -265,8 +300,13 @@ export function RegisterStoreSheet({
                     return (
                       <Pressable
                         key={key}
-                        style={[styles.categoryChip, active && styles.categoryChipActive]}
-                        onPress={() => setCategory(key)}
+                        style={[
+                          styles.categoryChip,
+                          active && styles.categoryChipActive,
+                        ]}
+                        onPress={() =>
+                          setCategory((prev) => (prev === key ? null : key))
+                        }
                       >
                         <Text
                           style={[
@@ -284,45 +324,65 @@ export function RegisterStoreSheet({
 
               <Field label="메뉴">
                 <TextInput
-                  style={[styles.input, styles.multiline]}
+                  style={styles.input}
                   value={menu}
                   onChangeText={setMenu}
-                  placeholder="예: 순대 5000 · 순대국 7000"
+                  placeholder="예: 순대 6000원"
                   placeholderTextColor={colors.textMuted}
-                  multiline
                 />
               </Field>
 
-              <Field label="오늘날">
+              <Field label="운영 요일">
+                <View style={styles.dayRow}>
+                  {WEEK_DAYS.map((d) => {
+                    const active = selectedDays.includes(d.key);
+                    return (
+                      <Pressable
+                        key={d.key}
+                        style={[styles.dayChip, active && styles.dayChipActive]}
+                        onPress={() => toggleDay(d.key)}
+                        accessibilityRole="checkbox"
+                        accessibilityState={{ checked: active }}
+                        accessibilityLabel={d.label}
+                      >
+                        <Text
+                          style={[
+                            styles.dayChipText,
+                            active && styles.dayChipTextActive,
+                          ]}
+                        >
+                          {d.label}
+                        </Text>
+                      </Pressable>
+                    );
+                  })}
+                </View>
+              </Field>
+
+              <Field label="시간">
                 <TextInput
                   style={styles.input}
-                  value={todayHours}
-                  onChangeText={setTodayHours}
-                  placeholder="예: 11:00~20:00"
+                  value={timeText}
+                  onChangeText={setTimeText}
+                  placeholder="예: 18시 있음"
                   placeholderTextColor={colors.textMuted}
                 />
               </Field>
 
               <Field label="위치">
                 <TextInput
-                  style={[styles.input, styles.multiline]}
+                  style={styles.input}
                   value={locationText}
                   onChangeText={setLocationText}
-                  placeholder="판매 위치를 입력해 주세요"
+                  placeholder="예: 목동 현대아파트"
                   placeholderTextColor={colors.textMuted}
-                  multiline
                 />
               </Field>
 
-              <Text style={styles.photoSection}>사진첨부</Text>
+              <Text style={styles.photoSection}>사진 첨부</Text>
               {(Object.keys(PHOTO_LABELS) as PhotoKey[]).map((key) => (
                 <View key={key} style={styles.photoRow}>
-                  <View style={styles.photoMeta}>
-                    <Text style={styles.photoLabel}>{PHOTO_LABELS[key]}</Text>
-                    <Text style={styles.photoHint}>
-                      {photos[key] ? '첨부됨' : '선택'}
-                    </Text>
-                  </View>
+                  <Text style={styles.photoLabel}>{PHOTO_LABELS[key]}</Text>
                   {photos[key] ? (
                     <Image
                       source={{ uri: photos[key]!.uri }}
@@ -336,7 +396,7 @@ export function RegisterStoreSheet({
                     onPress={() => choosePhotoSource(key)}
                   >
                     <Text style={styles.attachText}>
-                      {photos[key] ? '다시 선택' : '첨부'}
+                      {photos[key] ? '다시 첨부' : '첨부'}
                     </Text>
                   </Pressable>
                 </View>
@@ -426,9 +486,59 @@ const styles = StyleSheet.create({
     color: colors.text,
     backgroundColor: colors.surface,
   },
-  multiline: {
-    minHeight: 72,
-    textAlignVertical: 'top',
+  categoryRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+  },
+  categoryChip: {
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: colors.chipBorder,
+    backgroundColor: colors.chip,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+  },
+  categoryChipActive: {
+    borderColor: colors.chipBorderActive,
+    backgroundColor: colors.chipActive,
+  },
+  categoryChipText: {
+    fontFamily: fonts.medium,
+    fontSize: 13,
+    color: colors.textSecondary,
+  },
+  categoryChipTextActive: {
+    color: colors.text,
+    fontFamily: fonts.bold,
+  },
+  dayRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+  },
+  dayChip: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: colors.chipBorder,
+    backgroundColor: colors.chip,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  dayChipActive: {
+    borderColor: colors.accent,
+    backgroundColor: colors.accent,
+  },
+  dayChipText: {
+    fontFamily: fonts.medium,
+    fontSize: 14,
+    color: colors.textSecondary,
+  },
+  dayChipTextActive: {
+    color: '#FFFFFF',
+    fontFamily: fonts.bold,
   },
   photoSection: {
     fontFamily: fonts.bold,
@@ -441,17 +551,11 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 10,
   },
-  photoMeta: {
-    flex: 1,
-    gap: 2,
-  },
   photoLabel: {
+    width: 64,
     fontFamily: fonts.medium,
     color: colors.text,
     fontSize: 14,
-  },
-  photoHint: {
-    ...typography.caption,
   },
   thumb: {
     width: 52,
@@ -464,11 +568,13 @@ const styles = StyleSheet.create({
     borderColor: colors.border,
   },
   attachBtn: {
+    marginLeft: 'auto',
     borderRadius: 10,
     borderWidth: 1,
     borderColor: colors.border,
-    paddingHorizontal: 12,
+    paddingHorizontal: 14,
     paddingVertical: 10,
+    backgroundColor: colors.surface,
   },
   attachText: {
     fontFamily: fonts.medium,

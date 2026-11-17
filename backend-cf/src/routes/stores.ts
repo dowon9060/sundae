@@ -10,24 +10,21 @@ import { verifyStore } from '../services/verifications';
 const stores = new Hono<{ Bindings: Env }>();
 
 const REG_ERROR_MESSAGES: Record<string, string> = {
-  EMPTY_NAME: '이름을 입력해 주세요.',
-  EMPTY_MENU: '메뉴를 입력해 주세요.',
-  EMPTY_TODAY_HOURS: '오늘 운영 시간을 입력해 주세요.',
-  EMPTY_LOCATION: '위치를 입력해 주세요.',
-  INVALID_CATEGORY: '카테고리를 선택해 주세요.',
+  EMPTY_PAYLOAD: '내용을 하나 이상 입력해 주세요.',
+  INVALID_CATEGORY: '카테고리가 올바르지 않습니다.',
   INVALID_NAME: '이름 형식이 올바르지 않습니다.',
   INVALID_MENU: '메뉴 형식이 올바르지 않습니다.',
-  INVALID_TODAY_HOURS: '오늘 운영 시간 형식이 올바르지 않습니다.',
+  INVALID_TODAY_HOURS: '운영 시간 형식이 올바르지 않습니다.',
   INVALID_LOCATION: '위치 형식이 올바르지 않습니다.',
   TOO_LONG_NAME: '이름이 너무 깁니다. 80자 이내로 입력해 주세요.',
   TOO_LONG_MENU: '메뉴가 너무 깁니다. 500자 이내로 입력해 주세요.',
-  TOO_LONG_TODAY_HOURS: '오늘 운영 시간이 너무 깁니다.',
+  TOO_LONG_TODAY_HOURS: '운영 시간이 너무 깁니다.',
   TOO_LONG_LOCATION: '위치가 너무 깁니다. 200자 이내로 입력해 주세요.',
   INVALID_PHOTO_MENU: '메뉴 사진 형식이 올바르지 않습니다.',
-  INVALID_PHOTO_LOCATION: '위치 캡쳐 사진 형식이 올바르지 않습니다.',
+  INVALID_PHOTO_LOCATION: '위치 사진 형식이 올바르지 않습니다.',
   INVALID_PHOTO_TRUCK: '푸드트럭 사진 형식이 올바르지 않습니다.',
   PHOTO_TOO_LARGE_MENU: '메뉴 사진이 너무 큽니다. 다시 첨부해 주세요.',
-  PHOTO_TOO_LARGE_LOCATION: '위치 캡쳐 사진이 너무 큽니다. 다시 첨부해 주세요.',
+  PHOTO_TOO_LARGE_LOCATION: '위치 사진이 너무 큽니다. 다시 첨부해 주세요.',
   PHOTO_TOO_LARGE_TRUCK: '푸드트럭 사진이 너무 큽니다. 다시 첨부해 주세요.',
 };
 

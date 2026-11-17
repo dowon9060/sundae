@@ -175,11 +175,11 @@ export async function submitStoreReport(
 }
 
 export interface StoreRegistrationPayload {
-  name: string;
-  category: Exclude<StoreCategory, 'all'>;
-  menu: string;
-  today_hours: string;
-  location_text: string;
+  name?: string;
+  category?: Exclude<StoreCategory, 'all'> | null;
+  menu?: string;
+  today_hours?: string;
+  location_text?: string;
   lat?: number | null;
   lng?: number | null;
   photo_menu?: string | null;

@@ -23,11 +23,11 @@ const STORE_CATEGORIES = new Set<StoreCategory>([
 ]);
 
 export interface RegistrationInput {
-  name: string;
-  category: StoreCategory;
-  menu: string;
-  today_hours: string;
-  location_text: string;
+  name?: string | null;
+  category?: StoreCategory | null;
+  menu?: string | null;
+  today_hours?: string | null;
+  location_text?: string | null;
   lat?: number | null;
   lng?: number | null;
   photo_menu?: string | null;
@@ -35,18 +35,17 @@ export interface RegistrationInput {
   photo_truck?: string | null;
 }
 
-function trimRequired(
+/** 선택 입력 — 비어 있으면 빈 문자열, 길이만 검사 */
+function trimOptional(
   value: unknown,
   label: string,
   maxLen: number
 ): string {
+  if (value == null || value === '') return '';
   if (typeof value !== 'string') {
     throw new Error(`INVALID_${label}`);
   }
   const next = value.trim();
-  if (!next) {
-    throw new Error(`EMPTY_${label}`);
-  }
   if (next.length > maxLen) {
     throw new Error(`TOO_LONG_${label}`);
   }
@@ -82,14 +81,25 @@ export async function createStoreRegistration(
   env: Env,
   raw: RegistrationInput
 ) {
-  const name = trimRequired(raw.name, 'NAME', MAX_NAME);
-  if (typeof raw.category !== 'string' || !STORE_CATEGORIES.has(raw.category as StoreCategory)) {
-    throw new Error('INVALID_CATEGORY');
+  const name = trimOptional(raw.name, 'NAME', MAX_NAME);
+  const menu = trimOptional(raw.menu, 'MENU', MAX_MENU);
+  const today_hours = trimOptional(
+    raw.today_hours,
+    'TODAY_HOURS',
+    MAX_TODAY_HOURS
+  );
+  const location_text = trimOptional(raw.location_text, 'LOCATION', MAX_LOCATION);
+
+  let category: StoreCategory = 'other';
+  if (raw.category != null && raw.category !== '') {
+    if (
+      typeof raw.category !== 'string' ||
+      !STORE_CATEGORIES.has(raw.category as StoreCategory)
+    ) {
+      throw new Error('INVALID_CATEGORY');
+    }
+    category = raw.category as StoreCategory;
   }
-  const category = raw.category as StoreCategory;
-  const menu = trimRequired(raw.menu, 'MENU', MAX_MENU);
-  const today_hours = trimRequired(raw.today_hours, 'TODAY_HOURS', MAX_TODAY_HOURS);
-  const location_text = trimRequired(raw.location_text, 'LOCATION', MAX_LOCATION);
 
   let lat = optionalCoord(raw.lat);
   let lng = optionalCoord(raw.lng);
@@ -108,6 +118,17 @@ export async function createStoreRegistration(
   const photo_menu = optionalPhoto(raw.photo_menu, 'MENU');
   const photo_location = optionalPhoto(raw.photo_location, 'LOCATION');
   const photo_truck = optionalPhoto(raw.photo_truck, 'TRUCK');
+
+  const hasAnything =
+    Boolean(name) ||
+    Boolean(menu) ||
+    Boolean(today_hours) ||
+    Boolean(location_text) ||
+    raw.category != null ||
+    Boolean(photo_menu || photo_location || photo_truck);
+  if (!hasAnything) {
+    throw new Error('EMPTY_PAYLOAD');
+  }
 
   const id = crypto.randomUUID();
 
