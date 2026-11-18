@@ -390,10 +390,14 @@ admin.patch('/stores/:id/hours', async (c) => {
 
 const PHOTO_ERROR_MESSAGES: Record<string, string> = {
   EMPTY_PHOTO: '사진 파일이 비어 있습니다.',
-  PHOTO_TOO_LARGE: '사진은 5MB 이하만 올릴 수 있습니다.',
+  PHOTO_TOO_LARGE: '사진은 2MB 이하만 올릴 수 있습니다.',
   INVALID_PHOTO_TYPE: 'JPG, PNG, WEBP 사진만 올릴 수 있습니다.',
   PHOTOS_NOT_CONFIGURED:
     '사진 저장소(R2)가 아직 연결되지 않았습니다. Cloudflare에서 R2를 활성화한 뒤 다시 배포해 주세요.',
+  R2_STORAGE_QUOTA:
+    '사진 저장 무료 한도(8GB)에 도달했습니다. 기존 사진을 정리하거나 다음 달 이후 다시 시도해 주세요.',
+  R2_CLASS_A_QUOTA:
+    '이달 사진 업로드 무료 한도에 도달했습니다. 다음 달 1일(한국시간)에 다시 올릴 수 있습니다.',
 };
 
 /** 본문: 이미지 바이너리 그대로 (Content-Type: image/*) */
@@ -414,7 +418,9 @@ admin.post('/photos', async (c) => {
       const status =
         code === 'PHOTO_TOO_LARGE'
           ? 413
-          : code === 'PHOTOS_NOT_CONFIGURED'
+          : code === 'PHOTOS_NOT_CONFIGURED' ||
+              code === 'R2_STORAGE_QUOTA' ||
+              code === 'R2_CLASS_A_QUOTA'
             ? 503
             : 400;
       return c.json({ error: message }, status);

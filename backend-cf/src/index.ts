@@ -7,7 +7,7 @@ import locations from './routes/locations';
 import analytics from './routes/analytics';
 import admin from './routes/admin';
 import adminAuth from './routes/adminAuth';
-import { isValidPhotoKey, PHOTO_PATH_PREFIX } from './services/photos';
+import { getPhotoObject, PHOTO_PATH_PREFIX } from './services/photos';
 
 const app = new Hono<{ Bindings: Env }>();
 
@@ -29,14 +29,8 @@ app.get('/health', (c) => c.json({ ok: true, service: 'sundaecha-api' }));
 
 /** 앱 이미지 로딩용 공개 경로 — /api 레이트 리밋 대상에서 제외 */
 app.get(`${PHOTO_PATH_PREFIX}*`, async (c) => {
-  if (!c.env.PHOTOS) {
-    return c.json({ error: 'Not found' }, 404);
-  }
   const key = decodeURIComponent(new URL(c.req.url).pathname.slice(PHOTO_PATH_PREFIX.length));
-  if (!isValidPhotoKey(key)) {
-    return c.json({ error: 'Not found' }, 404);
-  }
-  const object = await c.env.PHOTOS.get(key);
+  const object = await getPhotoObject(c.env, key);
   if (!object) {
     return c.json({ error: 'Not found' }, 404);
   }
