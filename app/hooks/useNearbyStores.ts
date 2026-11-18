@@ -41,14 +41,17 @@ export function useNearbyStores(
 
       const key = `${rLat}|${rLng}|${category}|${dayOfWeek}`;
       const now = Date.now();
+      const keyChanged = key !== lastKeyRef.current;
 
-      if (inflightRef.current && !opts?.force) {
+      // 같은 조건 요청이 진행 중이면 중복 호출만 막는다.
+      // 요일·카테고리·위치가 바뀌면 진행 중이어도 새 요청을 보낸다.
+      if (inflightRef.current && !opts?.force && !keyChanged) {
         return;
       }
 
       if (
         !opts?.force &&
-        key === lastKeyRef.current &&
+        !keyChanged &&
         now - lastAtRef.current < MIN_FETCH_GAP_MS
       ) {
         return;
@@ -56,7 +59,7 @@ export function useNearbyStores(
 
       if (
         opts?.force &&
-        key === lastKeyRef.current &&
+        !keyChanged &&
         now - lastAtRef.current < 1_500
       ) {
         return;
@@ -78,7 +81,8 @@ export function useNearbyStores(
           day: dayOfWeek,
         });
         if (seq !== seqRef.current) return;
-        setStores(data);
+        // 백엔드 미배포 대비: 선택한 요일 휴무 가게는 클라이언트에서도 숨김
+        setStores(data.filter((s) => !s.is_closed_on_day));
       } catch (e) {
         if (seq !== seqRef.current) return;
         setError(

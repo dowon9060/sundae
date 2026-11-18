@@ -106,9 +106,12 @@ export function NearbyMapModal({
           day: dayOfWeek,
         });
         if (seq !== seqRef.current) return;
-        setMapStores(data);
+        const openStores = data.filter((s) => !s.is_closed_on_day);
+        setMapStores(openStores);
         setSelected((prevSel) =>
-          prevSel && data.some((s) => s.id === prevSel.id) ? prevSel : null
+          prevSel && openStores.some((s) => s.id === prevSel.id)
+            ? prevSel
+            : null
         );
       } catch (err) {
         if (__DEV__) {

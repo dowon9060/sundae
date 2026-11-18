@@ -310,7 +310,7 @@ export async function listNearbyStores(
       ? (exceptionsByStore.get(row.id) ?? null)
       : null;
 
-    // 요일 탭은 그날 운영시간을 보여 주기 위함 — 휴무도 목록에 포함
+    // 선택한 요일에 운영하는 곳만 목록에 포함
     let is_closed_on_day = false;
     let today_hours_label: string | null = null;
 
@@ -326,6 +326,10 @@ export async function listNearbyStores(
       today_hours_label = `${dayLabel} 휴무`;
     } else {
       today_hours_label = `${dayLabel} ${hour.open_time}~${hour.close_time}`;
+    }
+
+    if (is_closed_on_day) {
+      continue;
     }
 
     const menu_summary = menuSummariesByStore.get(row.id) ?? null;
@@ -382,13 +386,7 @@ export async function listNearbyStores(
     }
   }
 
-  // 운영 중인 곳 우선, 같은 그룹 안에서는 거리순
-  results.sort((a, b) => {
-    if (a.is_closed_on_day !== b.is_closed_on_day) {
-      return a.is_closed_on_day ? 1 : -1;
-    }
-    return a.distance_m - b.distance_m;
-  });
+  results.sort((a, b) => a.distance_m - b.distance_m);
   return results;
 }
 

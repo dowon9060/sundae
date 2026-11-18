@@ -29,13 +29,27 @@ interface Props {
   ) => void;
 }
 
-const EMPTY_NO_STORES = '주변에 등록된 판매점이 없습니다.';
+const EMPTY_NO_STORES = '이 요일에 운영하는 판매점이 없습니다.';
 
-function StoreListEmpty({ error }: { error: string | null }) {
+const DAY_LABELS = ['일', '월', '화', '수', '목', '금', '토'] as const;
+
+function StoreListEmpty({
+  error,
+  dayOfWeek,
+}: {
+  error: string | null;
+  dayOfWeek: number;
+}) {
+  const dayLabel = DAY_LABELS[dayOfWeek] ?? '';
   return (
     <View style={styles.emptyWrap}>
       <Text style={styles.emptyMain}>휑~~~</Text>
-      <Text style={styles.emptySecondary}>{error || EMPTY_NO_STORES}</Text>
+      <Text style={styles.emptySecondary}>
+        {error ||
+          (dayLabel
+            ? `${dayLabel}요일에 운영하는 판매점이 없습니다.`
+            : EMPTY_NO_STORES)}
+      </Text>
     </View>
   );
 }
@@ -85,7 +99,9 @@ export function StoreList({
               tintColor={colors.text}
             />
           }
-          ListEmptyComponent={<StoreListEmpty error={error} />}
+          ListEmptyComponent={
+            <StoreListEmpty error={error} dayOfWeek={dayOfWeek} />
+          }
           contentContainerStyle={styles.listContent}
         />
       )}
