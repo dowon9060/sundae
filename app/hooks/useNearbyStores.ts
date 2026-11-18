@@ -7,8 +7,9 @@ const DEFAULT_RADIUS_M = 5000;
 /** 동일 조건 재요청 최소 간격 */
 const MIN_FETCH_GAP_MS = 5_000;
 
+/** ~11m 단위로 반올림 — GPS 흔들림으로 같은 자리 재조회가 반복되지 않게 한다 */
 function roundCoord(n: number): number {
-  return Math.round(n * 1e5) / 1e5;
+  return Math.round(n * 1e4) / 1e4;
 }
 
 export function useNearbyStores(

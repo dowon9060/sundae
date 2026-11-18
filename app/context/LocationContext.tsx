@@ -136,7 +136,10 @@ export function LocationProvider({ children }: { children: ReactNode }) {
         if (cancelled) return;
 
         if (gps) {
-          commitLocation(gps);
+          // 저장된 위치와 크게 다르지 않으면 목록 재조회를 유발하지 않는다
+          if (!saved || !sameCoords(saved, gps.lat, gps.lng, 0.0008)) {
+            commitLocation(gps);
+          }
           setPermissionDenied(false);
         } else if (!saved) {
           setPermissionDenied(true);
