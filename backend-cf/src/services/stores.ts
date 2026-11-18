@@ -246,30 +246,67 @@ export async function listNearbyStores(
   const isSelectedToday = dayOfWeek === seoul.dayOfWeek;
   const dayLabel = DAY_LABELS[dayOfWeek];
 
+  // 반경 밖은 SQL에서 먼저 잘라 전체 매장 풀스캔을 피한다
+  const latDelta = radiusM / 111_320;
+  const cosLat = Math.cos((opts.lat * Math.PI) / 180);
+  const lngDelta = radiusM / (111_320 * Math.max(0.2, Math.abs(cosLat)));
+  const minLat = opts.lat - latDelta;
+  const maxLat = opts.lat + latDelta;
+  const minLng = opts.lng - lngDelta;
+  const maxLng = opts.lng + lngDelta;
+
+  type NearbyRow = StoreWithLocation & {
+    open_time: string | null;
+    close_time: string | null;
+  };
+
   let query = `
     SELECT
-      s.*,
+      s.id,
+      s.name,
+      s.category,
+      s.description,
+      s.photo_url,
+      s.status,
+      s.business_status,
+      s.created_at,
+      s.like_count,
+      s.verify_count,
       l.lat,
       l.lng,
       l.address,
       l.location_note,
-      l.updated_at AS location_updated_at
+      l.updated_at AS location_updated_at,
+      bh.open_time,
+      bh.close_time
     FROM stores s
     INNER JOIN store_locations l ON l.store_id = s.id
+    INNER JOIN business_hours bh
+      ON bh.store_id = s.id
+      AND bh.day_of_week = ?
+      AND bh.is_closed = 0
+      AND bh.open_time IS NOT NULL
+      AND bh.close_time IS NOT NULL
     WHERE s.status = 'active'
+      AND l.lat BETWEEN ? AND ?
+      AND l.lng BETWEEN ? AND ?
   `;
-  const binds: (string | number)[] = [];
+  const binds: (string | number)[] = [
+    dayOfWeek,
+    minLat,
+    maxLat,
+    minLng,
+    maxLng,
+  ];
 
   if (opts.category && opts.category !== 'all') {
     query += ` AND s.category = ?`;
     binds.push(opts.category);
   }
 
-  const rows = await env.DB.prepare(query)
-    .bind(...binds)
-    .all<StoreWithLocation>();
+  const rows = await env.DB.prepare(query).bind(...binds).all<NearbyRow>();
 
-  type Candidate = StoreWithLocation & {
+  type Candidate = NearbyRow & {
     distance_m: number;
     location_stale: boolean;
   };
@@ -293,19 +330,16 @@ export async function listNearbyStores(
 
   const storeIds = candidates.map((c) => c.id);
 
-  const [hoursByStore, exceptionsByStore, menuSummariesByStore] =
-    await Promise.all([
-      batchBusinessHours(env.DB, storeIds, dayOfWeek),
-      isSelectedToday
-        ? batchScheduleExceptions(env.DB, storeIds, seoul.dateStr)
-        : Promise.resolve(new Map<string, ExceptionRow>()),
-      batchMenuSummaries(env.DB, storeIds),
-    ]);
+  const [exceptionsByStore, menuSummariesByStore] = await Promise.all([
+    isSelectedToday
+      ? batchScheduleExceptions(env.DB, storeIds, seoul.dateStr)
+      : Promise.resolve(new Map<string, ExceptionRow>()),
+    batchMenuSummaries(env.DB, storeIds),
+  ]);
 
   const results: NearbyStoreResult[] = [];
 
   for (const row of candidates) {
-    const hour = hoursByStore.get(row.id);
     const exception = isSelectedToday
       ? (exceptionsByStore.get(row.id) ?? null)
       : null;
@@ -321,11 +355,11 @@ export async function listNearbyStores(
       } else {
         today_hours_label = `${dayLabel} ${exception.open_time}~${exception.close_time}`;
       }
-    } else if (!hour || hour.is_closed || !hour.open_time || !hour.close_time) {
+    } else if (!row.open_time || !row.close_time) {
       is_closed_on_day = true;
       today_hours_label = `${dayLabel} 휴무`;
     } else {
-      today_hours_label = `${dayLabel} ${hour.open_time}~${hour.close_time}`;
+      today_hours_label = `${dayLabel} ${row.open_time}~${row.close_time}`;
     }
 
     if (is_closed_on_day) {
@@ -335,7 +369,19 @@ export async function listNearbyStores(
     const menu_summary = menuSummariesByStore.get(row.id) ?? null;
 
     results.push({
-      ...omitPhotoUrls(row),
+      id: row.id,
+      name: row.name,
+      category: row.category,
+      description: row.description,
+      photo_url: row.photo_url,
+      status: row.status,
+      business_status: row.business_status,
+      created_at: row.created_at,
+      lat: row.lat,
+      lng: row.lng,
+      address: row.address,
+      location_note: row.location_note,
+      location_updated_at: row.location_updated_at,
       distance_m: row.distance_m,
       location_stale: row.location_stale,
       menu_summary,
@@ -348,18 +394,24 @@ export async function listNearbyStores(
 
   if (opts.clientId && results.length > 0) {
     const ids = results.map((r) => r.id);
-    try {
-      const likedIds = await getLikedStoreIds(env, opts.clientId, ids);
+    const [likedResult, verifiedResult] = await Promise.allSettled([
+      getLikedStoreIds(env, opts.clientId, ids),
+      getVerifiedStoreIds(env, opts.clientId, ids),
+    ]);
+
+    if (likedResult.status === 'fulfilled') {
       for (const item of results) {
-        item.liked = likedIds.has(item.id);
+        item.liked = likedResult.value.has(item.id);
       }
-    } catch (err) {
-      // likes 테이블 미적용 등으로 목록 전체가 500 나지 않게 한다
+    } else {
       console.error(
         JSON.stringify({
           level: 'warn',
           message: 'liked_lookup_failed',
-          detail: err instanceof Error ? err.message : 'unknown',
+          detail:
+            likedResult.reason instanceof Error
+              ? likedResult.reason.message
+              : 'unknown',
         })
       );
       for (const item of results) {
@@ -367,17 +419,19 @@ export async function listNearbyStores(
       }
     }
 
-    try {
-      const verifiedIds = await getVerifiedStoreIds(env, opts.clientId, ids);
+    if (verifiedResult.status === 'fulfilled') {
       for (const item of results) {
-        item.verified = verifiedIds.has(item.id);
+        item.verified = verifiedResult.value.has(item.id);
       }
-    } catch (err) {
+    } else {
       console.error(
         JSON.stringify({
           level: 'warn',
           message: 'verified_lookup_failed',
-          detail: err instanceof Error ? err.message : 'unknown',
+          detail:
+            verifiedResult.reason instanceof Error
+              ? verifiedResult.reason.message
+              : 'unknown',
         })
       );
       for (const item of results) {

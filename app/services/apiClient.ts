@@ -1,6 +1,7 @@
 /** 앱 전역 API 호출 제한·중복 GET 합치기·타임아웃 */
 
-const MIN_GAP_MS = 400;
+/** 연속 요청 최소 간격 — 체감 지연을 줄이기 위해 짧게 유지 */
+const MIN_GAP_MS = 50;
 const MAX_PER_WINDOW = 40;
 const WINDOW_MS = 60_000;
 const FETCH_TIMEOUT_MS = 12_000;
