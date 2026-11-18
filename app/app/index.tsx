@@ -21,6 +21,7 @@ export default function HomeScreen() {
     useLocation();
   const [category, setCategory] = useState<StoreCategory>('all');
   const [dayOfWeek, setDayOfWeek] = useState(getTodayDayOfWeek);
+  const [openNowOnly, setOpenNowOnly] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const [registerOpen, setRegisterOpen] = useState(false);
   const [mapOpen, setMapOpen] = useState(false);
@@ -33,6 +34,13 @@ export default function HomeScreen() {
       setDayOfWeek((prev) => (prev === today ? prev : today));
     }, [])
   );
+
+  const onChangeDay = useCallback((day: number) => {
+    setDayOfWeek(day);
+    if (day !== getTodayDayOfWeek()) {
+      setOpenNowOnly(false);
+    }
+  }, []);
 
   const { stores, loading, error, refresh, updateStoreLike, updateStoreVerify } =
     useNearbyStores(location?.lat, location?.lng, category, dayOfWeek);
@@ -104,7 +112,9 @@ export default function HomeScreen() {
         loading={loading || (locLoading && !location)}
         refreshing={refreshing}
         dayOfWeek={dayOfWeek}
-        onChangeDay={setDayOfWeek}
+        onChangeDay={onChangeDay}
+        openNowOnly={openNowOnly}
+        onChangeOpenNow={setOpenNowOnly}
         error={listMessage}
         onRefresh={onRefresh}
         onPressStore={(id) => router.push(`/store/${id}`)}

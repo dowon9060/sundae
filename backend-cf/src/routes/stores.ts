@@ -5,7 +5,7 @@ import { createStoreReport, isValidReportReason } from '../services/reports';
 import { REPORT_REASON_LABELS } from '../services/notify';
 import { isValidClientId, toggleStoreLike } from '../services/likes';
 import { getHours, getMenus, getStoreById, listNearbyStores } from '../services/stores';
-import { verifyStore } from '../services/verifications';
+import { VERIFY_RADIUS_M, verifyStore } from '../services/verifications';
 
 const stores = new Hono<{ Bindings: Env }>();
 
@@ -94,9 +94,13 @@ stores.post('/:id/likes', async (c) => {
   }
 });
 
+function formatMeters(m: number): string {
+  return m < 1000 ? `${m}m` : `${(m / 1000).toFixed(1)}km`;
+}
+
 stores.post('/:id/verifications', async (c) => {
   const id = c.req.param('id');
-  let body: { client_id?: string };
+  let body: { client_id?: string; lat?: unknown; lng?: unknown };
   try {
     body = await c.req.json();
   } catch {
@@ -107,12 +111,43 @@ stores.post('/:id/verifications', async (c) => {
     return c.json({ error: '클라이언트 식별자가 올바르지 않습니다.' }, 400);
   }
 
+  const lat = body.lat;
+  const lng = body.lng;
+  if (
+    typeof lat !== 'number' ||
+    typeof lng !== 'number' ||
+    !Number.isFinite(lat) ||
+    !Number.isFinite(lng) ||
+    lat < -90 ||
+    lat > 90 ||
+    lng < -180 ||
+    lng > 180
+  ) {
+    return c.json(
+      {
+        error:
+          '현재 위치가 필요합니다. 앱을 최신 버전으로 업데이트한 뒤 다시 시도해 주세요.',
+      },
+      400
+    );
+  }
+
   try {
-    const data = await verifyStore(c.env, id, body.client_id);
+    const data = await verifyStore(c.env, id, body.client_id, { lat, lng });
     return c.json({ data });
   } catch (err) {
     if (err instanceof Error && err.message === 'STORE_NOT_FOUND') {
       return c.json({ error: '판매점을 찾을 수 없습니다.' }, 404);
+    }
+    if (err instanceof Error && err.message.startsWith('TOO_FAR:')) {
+      const distance = Number(err.message.slice('TOO_FAR:'.length)) || 0;
+      return c.json(
+        {
+          error: `판매점 ${VERIFY_RADIUS_M}m 안에서만 인증할 수 있어요. (지금 약 ${formatMeters(distance)} 떨어져 있어요)`,
+          distance_m: distance,
+        },
+        403
+      );
     }
     console.error(
       JSON.stringify({

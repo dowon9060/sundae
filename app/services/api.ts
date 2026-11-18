@@ -61,7 +61,9 @@ export async function fetchNearbyStores(params: {
     like_count: Number(s.like_count ?? 0),
     liked: Boolean(s.liked),
     verify_count: Number(s.verify_count ?? 0),
+    today_verify_count: Number(s.today_verify_count ?? 0),
     verified: Boolean(s.verified),
+    is_open_now: Boolean(s.is_open_now),
   }));
 }
 
@@ -81,15 +83,32 @@ export async function toggleStoreLike(
 }
 
 export async function verifyStorePresence(
-  storeId: string
-): Promise<{ verified: boolean; verify_count: number; already: boolean }> {
+  storeId: string,
+  coords: { lat: number; lng: number }
+): Promise<{
+  verified: boolean;
+  verify_count: number;
+  today_verify_count: number;
+  already: boolean;
+  distance_m: number;
+}> {
   const clientId = await getClientId();
   const json = await request<{
-    data: { verified: boolean; verify_count: number; already: boolean };
+    data: {
+      verified: boolean;
+      verify_count: number;
+      today_verify_count: number;
+      already: boolean;
+      distance_m: number;
+    };
   }>(`/api/stores/${storeId}/verifications`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ client_id: clientId }),
+    body: JSON.stringify({
+      client_id: clientId,
+      lat: coords.lat,
+      lng: coords.lng,
+    }),
   });
   return json.data;
 }

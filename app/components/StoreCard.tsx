@@ -19,6 +19,7 @@ import {
   typography,
 } from '../constants/theme';
 import { toggleStoreLike, verifyStorePresence } from '../services/api';
+import { getCurrentGpsCoords } from '../services/location';
 import {
   businessStatusLabel,
   formatDistance,
@@ -32,7 +33,8 @@ interface Props {
   onVerifyChange?: (
     storeId: string,
     verified: boolean,
-    verifyCount: number
+    verifyCount: number,
+    todayVerifyCount: number
   ) => void;
 }
 
@@ -43,8 +45,9 @@ export function StoreCard({
   onVerifyChange,
 }: Props) {
   const statusLabel = businessStatusLabel(store.business_status);
-  const statusColor =
-    store.business_status === 'confirmed_open'
+  const statusColor = store.is_open_now
+    ? colors.accent
+    : store.business_status === 'confirmed_open'
       ? colors.accent
       : store.business_status === 'expected'
         ? colors.accentMuted
@@ -59,6 +62,9 @@ export function StoreCard({
   const [verifyCount, setVerifyCount] = useState(
     Number(store.verify_count ?? 0)
   );
+  const [todayVerifyCount, setTodayVerifyCount] = useState(
+    Number(store.today_verify_count ?? 0)
+  );
   const [verifying, setVerifying] = useState(false);
   const [verifyError, setVerifyError] = useState<string | null>(null);
 
@@ -70,7 +76,8 @@ export function StoreCard({
   useEffect(() => {
     setVerified(Boolean(store.verified));
     setVerifyCount(Number(store.verify_count ?? 0));
-  }, [store.id, store.verified, store.verify_count]);
+    setTodayVerifyCount(Number(store.today_verify_count ?? 0));
+  }, [store.id, store.verified, store.verify_count, store.today_verify_count]);
 
   const onPressLike = async () => {
     if (liking) return;
@@ -108,17 +115,29 @@ export function StoreCard({
     setVerifyError(null);
 
     const prevCount = verifyCount;
-    setVerified(true);
-    setVerifyCount(prevCount + 1);
+    const prevToday = todayVerifyCount;
 
     try {
-      const result = await verifyStorePresence(store.id);
+      const coords = await getCurrentGpsCoords();
+      if (!coords) {
+        setVerifyError('위치 권한이 필요합니다. 설정에서 위치 권한을 켜 주세요.');
+        return;
+      }
+
+      const result = await verifyStorePresence(store.id, coords);
       setVerified(result.verified);
       setVerifyCount(result.verify_count);
-      onVerifyChange?.(store.id, result.verified, result.verify_count);
+      setTodayVerifyCount(result.today_verify_count);
+      onVerifyChange?.(
+        store.id,
+        result.verified,
+        result.verify_count,
+        result.today_verify_count
+      );
     } catch (e) {
       setVerified(false);
       setVerifyCount(prevCount);
+      setTodayVerifyCount(prevToday);
       setVerifyError(
         e instanceof Error
           ? e.message
@@ -129,8 +148,13 @@ export function StoreCard({
     }
   };
 
-  const verifyLabel =
-    verifyCount > 0 ? `인증 ${verifyCount}` : '인증하기';
+  const verifyLabel = verified
+    ? todayVerifyCount > 0
+      ? `오늘 인증 ${todayVerifyCount}`
+      : '오늘 인증함'
+    : todayVerifyCount > 0
+      ? `오늘 인증 ${todayVerifyCount}`
+      : '인증하기';
 
   return (
     <Pressable
@@ -211,7 +235,7 @@ export function StoreCard({
           </Text>
         ) : null}
         <Text style={[styles.status, { color: statusColor }]}>
-          {statusLabel}
+          {store.is_open_now ? '지금 영업 중' : statusLabel}
           {store.location_stale ? ' · 위치 정보 오래됨' : ''}
         </Text>
         <Pressable
@@ -227,7 +251,9 @@ export function StoreCard({
           disabled={verifying || verified}
           accessibilityRole="button"
           accessibilityLabel={
-            verified ? `인증됨 ${verifyCount}` : '현장 인증하기'
+            verified
+              ? `오늘 인증됨 ${todayVerifyCount}`
+              : '판매점 300m 안에서 현장 인증하기'
           }
         >
           {verifying ? (

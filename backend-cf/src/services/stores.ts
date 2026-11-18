@@ -12,7 +12,8 @@ import type {
 } from '../types';
 import { haversineMeters, isLocationStale } from './distance';
 import { getLikedStoreIds } from './likes';
-import { getVerifiedStoreIds } from './verifications';
+import { isOpenAtMinutes, seoulCalendar } from './seoulTime';
+import { getTodayVerifyCounts, getVerifiedStoreIds } from './verifications';
 
 const DAY_LABELS = ['일', '월', '화', '수', '목', '금', '토'];
 
@@ -61,36 +62,6 @@ export function normalizePhotoUrls(input: unknown): string[] {
 function omitPhotoUrls<T extends { photo_urls?: unknown }>(row: T): Omit<T, 'photo_urls'> {
   const { photo_urls: _omit, ...rest } = row;
   return rest;
-}
-
-/** Workers UTC 기준 → 한국(Asia/Seoul) 요일·날짜 */
-function seoulCalendar() {
-  const parts = new Intl.DateTimeFormat('en-CA', {
-    timeZone: 'Asia/Seoul',
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit',
-    weekday: 'short',
-  }).formatToParts(new Date());
-
-  const get = (type: string) =>
-    parts.find((p) => p.type === type)?.value ?? '';
-
-  const weekday = get('weekday'); // Sun Mon ...
-  const dayMap: Record<string, number> = {
-    Sun: 0,
-    Mon: 1,
-    Tue: 2,
-    Wed: 3,
-    Thu: 4,
-    Fri: 5,
-    Sat: 6,
-  };
-
-  return {
-    dayOfWeek: dayMap[weekday] ?? 0,
-    dateStr: `${get('year')}-${get('month')}-${get('day')}`,
-  };
 }
 
 type StoreWithLocation = StoreRow & {
@@ -330,12 +301,23 @@ export async function listNearbyStores(
 
   const storeIds = candidates.map((c) => c.id);
 
-  const [exceptionsByStore, menuSummariesByStore] = await Promise.all([
-    isSelectedToday
-      ? batchScheduleExceptions(env.DB, storeIds, seoul.dateStr)
-      : Promise.resolve(new Map<string, ExceptionRow>()),
-    batchMenuSummaries(env.DB, storeIds),
-  ]);
+  const [exceptionsByStore, menuSummariesByStore, todayVerifyCounts] =
+    await Promise.all([
+      isSelectedToday
+        ? batchScheduleExceptions(env.DB, storeIds, seoul.dateStr)
+        : Promise.resolve(new Map<string, ExceptionRow>()),
+      batchMenuSummaries(env.DB, storeIds),
+      getTodayVerifyCounts(env, storeIds).catch((err: unknown) => {
+        console.error(
+          JSON.stringify({
+            level: 'warn',
+            message: 'today_verify_count_failed',
+            detail: err instanceof Error ? err.message : 'unknown',
+          })
+        );
+        return new Map<string, number>();
+      }),
+    ]);
 
   const results: NearbyStoreResult[] = [];
 
@@ -347,24 +329,34 @@ export async function listNearbyStores(
     // 선택한 요일에 운영하는 곳만 목록에 포함
     let is_closed_on_day = false;
     let today_hours_label: string | null = null;
+    let effectiveOpen: string | null = null;
+    let effectiveClose: string | null = null;
 
     if (exception) {
       if (exception.is_closed || !exception.open_time || !exception.close_time) {
         is_closed_on_day = true;
         today_hours_label = `${dayLabel} 휴무`;
       } else {
+        effectiveOpen = exception.open_time;
+        effectiveClose = exception.close_time;
         today_hours_label = `${dayLabel} ${exception.open_time}~${exception.close_time}`;
       }
     } else if (!row.open_time || !row.close_time) {
       is_closed_on_day = true;
       today_hours_label = `${dayLabel} 휴무`;
     } else {
+      effectiveOpen = row.open_time;
+      effectiveClose = row.close_time;
       today_hours_label = `${dayLabel} ${row.open_time}~${row.close_time}`;
     }
 
     if (is_closed_on_day) {
       continue;
     }
+
+    const is_open_now =
+      isSelectedToday &&
+      isOpenAtMinutes(effectiveOpen, effectiveClose, seoul.minutesOfDay);
 
     const menu_summary = menuSummariesByStore.get(row.id) ?? null;
 
@@ -387,8 +379,10 @@ export async function listNearbyStores(
       menu_summary,
       today_hours_label,
       is_closed_on_day,
+      is_open_now,
       like_count: Number(row.like_count ?? 0),
       verify_count: Number(row.verify_count ?? 0),
+      today_verify_count: todayVerifyCounts.get(row.id) ?? 0,
     });
   }
 

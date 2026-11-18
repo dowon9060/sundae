@@ -110,10 +110,15 @@ export interface NearbyStoreResult extends StoreRow {
   today_hours_label: string | null;
   /** 선택한 요일 기준 휴무 여부 */
   is_closed_on_day: boolean;
+  /** 오늘(서울) 요일을 골랐을 때만 — 등록 운영시간 기준 */
+  is_open_now: boolean;
   like_count: number;
   /** client_id가 있을 때만 */
   liked?: boolean;
+  /** 누적 인증 수 */
   verify_count: number;
-  /** client_id가 있을 때만 */
+  /** 오늘(서울) 인증 수 */
+  today_verify_count: number;
+  /** client_id가 있을 때만 — 오늘 이 기기가 인증했는지 */
   verified?: boolean;
 }

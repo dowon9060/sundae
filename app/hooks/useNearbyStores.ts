@@ -113,11 +113,21 @@ export function useNearbyStores(
   );
 
   const updateStoreVerify = useCallback(
-    (storeId: string, verified: boolean, verifyCount: number) => {
+    (
+      storeId: string,
+      verified: boolean,
+      verifyCount: number,
+      todayVerifyCount: number
+    ) => {
       setStores((prev) =>
         prev.map((s) =>
           s.id === storeId
-            ? { ...s, verified, verify_count: verifyCount }
+            ? {
+                ...s,
+                verified,
+                verify_count: verifyCount,
+                today_verify_count: todayVerifyCount,
+              }
             : s
         )
       );

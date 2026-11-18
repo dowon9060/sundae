@@ -38,9 +38,15 @@ export interface NearbyStore {
   menu_summary: string | null;
   today_hours_label: string | null;
   is_closed_on_day?: boolean;
+  /** 오늘 요일 선택 시 — 등록 운영시간 기준 */
+  is_open_now?: boolean;
   like_count: number;
   liked?: boolean;
+  /** 누적 인증 수 */
   verify_count: number;
+  /** 오늘(서울) 인증 수 */
+  today_verify_count?: number;
+  /** 오늘 이 기기가 인증했는지 */
   verified?: boolean;
 }
 
@@ -85,7 +91,7 @@ export const CATEGORY_LABELS: Record<Exclude<StoreCategory, 'all'>, string> = {
   dakkochi: '닭꼬치',
   mandu: '만두',
   takoyaki: '타코야키',
-  chicken: '치킨',
+  chicken: '치킨·통닭',
   gopchang: '곱창',
   hotteok: '호떡',
   hoe: '회',
