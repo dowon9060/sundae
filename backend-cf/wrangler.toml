@@ -8,10 +8,11 @@ database_name = "sundaecha"
 database_id = "60f198aa-21b0-4541-ac1b-f86cb8d47745"
 migrations_dir = "migrations"
 
-# 어드민 첨부 사진. 생성: npx wrangler r2 bucket create sundaecha-photos
-[[r2_buckets]]
-binding = "PHOTOS"
-bucket_name = "sundaecha-photos"
+# 어드민 첨부 사진 (R2 대시보드 활성화 후 주석 해제)
+# npx wrangler r2 bucket create sundaecha-photos
+# [[r2_buckets]]
+# binding = "PHOTOS"
+# bucket_name = "sundaecha-photos"
 
 [vars]
 LOCATION_STALE_DAYS = "14"

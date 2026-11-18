@@ -392,6 +392,8 @@ const PHOTO_ERROR_MESSAGES: Record<string, string> = {
   EMPTY_PHOTO: '사진 파일이 비어 있습니다.',
   PHOTO_TOO_LARGE: '사진은 5MB 이하만 올릴 수 있습니다.',
   INVALID_PHOTO_TYPE: 'JPG, PNG, WEBP 사진만 올릴 수 있습니다.',
+  PHOTOS_NOT_CONFIGURED:
+    '사진 저장소(R2)가 아직 연결되지 않았습니다. Cloudflare에서 R2를 활성화한 뒤 다시 배포해 주세요.',
 };
 
 /** 본문: 이미지 바이너리 그대로 (Content-Type: image/*) */
@@ -409,7 +411,13 @@ admin.post('/photos', async (c) => {
     const code = err instanceof Error ? err.message : '';
     const message = PHOTO_ERROR_MESSAGES[code];
     if (message) {
-      return c.json({ error: message }, code === 'PHOTO_TOO_LARGE' ? 413 : 400);
+      const status =
+        code === 'PHOTO_TOO_LARGE'
+          ? 413
+          : code === 'PHOTOS_NOT_CONFIGURED'
+            ? 503
+            : 400;
+      return c.json({ error: message }, status);
     }
     console.error(
       JSON.stringify({ level: 'error', message: 'photo_upload_failed', error: String(err) })

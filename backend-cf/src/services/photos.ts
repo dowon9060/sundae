@@ -51,6 +51,8 @@ export async function savePhoto(
   const type = detectPhotoType(new Uint8Array(body, 0, Math.min(body.byteLength, 16)));
   if (!type) throw new Error('INVALID_PHOTO_TYPE');
 
+  if (!env.PHOTOS) throw new Error('PHOTOS_NOT_CONFIGURED');
+
   const key = `stores/${crypto.randomUUID()}.${type.ext}`;
   await env.PHOTOS.put(key, body, {
     httpMetadata: {

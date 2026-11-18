@@ -29,6 +29,9 @@ app.get('/health', (c) => c.json({ ok: true, service: 'sundaecha-api' }));
 
 /** 앱 이미지 로딩용 공개 경로 — /api 레이트 리밋 대상에서 제외 */
 app.get(`${PHOTO_PATH_PREFIX}*`, async (c) => {
+  if (!c.env.PHOTOS) {
+    return c.json({ error: 'Not found' }, 404);
+  }
   const key = decodeURIComponent(new URL(c.req.url).pathname.slice(PHOTO_PATH_PREFIX.length));
   if (!isValidPhotoKey(key)) {
     return c.json({ error: 'Not found' }, 404);
