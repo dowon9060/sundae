@@ -123,11 +123,26 @@ export async function fetchStoreDetail(
     qs.set('lat', String(lat));
     qs.set('lng', String(lng));
   }
+  try {
+    const clientId = await getClientId();
+    qs.set('client_id', clientId);
+  } catch {
+    // 클라이언트 ID 없이도 상세는 조회
+  }
   const suffix = qs.toString() ? `?${qs}` : '';
   const json = await request<{ data: StoreDetail }>(
     `/api/stores/${id}${suffix}`
   );
-  return json.data;
+  const s = json.data;
+  return {
+    ...s,
+    like_count: Number(s.like_count ?? 0),
+    liked: Boolean(s.liked),
+    verify_count: Number(s.verify_count ?? 0),
+    today_verify_count: Number(s.today_verify_count ?? 0),
+    verified: Boolean(s.verified),
+    is_open_now: Boolean(s.is_open_now),
+  };
 }
 
 export async function fetchStoreMenus(id: string): Promise<MenuItem[]> {

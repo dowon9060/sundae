@@ -23,7 +23,7 @@ export function MenuList({ menus, onPressPhoto }: Props) {
     <View style={styles.section}>
       <Text style={styles.title}>판매 메뉴</Text>
       {menus.length === 0 ? (
-        <Text style={styles.empty}>등록된 메뉴가 없습니다.</Text>
+        <Text style={styles.empty}>등록된 메뉴가 없어요.</Text>
       ) : (
         menus.map((menu) => (
           <View key={menu.id} style={styles.row}>

@@ -7,21 +7,64 @@ import {
   View,
 } from 'react-native';
 import { CATEGORY_CHIP_IMAGES } from '../constants/categoryImages';
-import { colors, layout, spacing, typography } from '../constants/theme';
+import { colors, fonts, layout, spacing, typography } from '../constants/theme';
 import { CATEGORY_LABELS, type StoreCategory } from '../types/store';
 
-const TABS: { key: StoreCategory; label: string }[] = [
-  { key: 'all', label: '전체' },
-  { key: 'sundae', label: CATEGORY_LABELS.sundae },
-  { key: 'bungeoppang', label: CATEGORY_LABELS.bungeoppang },
-  { key: 'dakkochi', label: CATEGORY_LABELS.dakkochi },
-  { key: 'mandu', label: CATEGORY_LABELS.mandu },
-  { key: 'takoyaki', label: CATEGORY_LABELS.takoyaki },
-  { key: 'chicken', label: CATEGORY_LABELS.chicken },
-  { key: 'gopchang', label: CATEGORY_LABELS.gopchang },
-  { key: 'hotteok', label: CATEGORY_LABELS.hotteok },
-  { key: 'hoe', label: CATEGORY_LABELS.hoe },
-  { key: 'other', label: CATEGORY_LABELS.other },
+/** 칩에 보이는 짧은 라벨 (긴 이름은 줄임) */
+const CHIP_LABELS: Record<StoreCategory, string> = {
+  all: '전체',
+  sundae: '순대',
+  bungeoppang: '붕어빵',
+  dakkochi: '닭꼬치',
+  mandu: '만두',
+  takoyaki: '타코',
+  chicken: '통닭',
+  gopchang: '곱창',
+  hotteok: '호떡',
+  hoe: '회',
+  other: '기타',
+};
+
+const TABS: { key: StoreCategory; label: string; chipLabel: string }[] = [
+  { key: 'all', label: '전체', chipLabel: CHIP_LABELS.all },
+  {
+    key: 'sundae',
+    label: CATEGORY_LABELS.sundae,
+    chipLabel: CHIP_LABELS.sundae,
+  },
+  {
+    key: 'bungeoppang',
+    label: CATEGORY_LABELS.bungeoppang,
+    chipLabel: CHIP_LABELS.bungeoppang,
+  },
+  {
+    key: 'dakkochi',
+    label: CATEGORY_LABELS.dakkochi,
+    chipLabel: CHIP_LABELS.dakkochi,
+  },
+  { key: 'mandu', label: CATEGORY_LABELS.mandu, chipLabel: CHIP_LABELS.mandu },
+  {
+    key: 'takoyaki',
+    label: CATEGORY_LABELS.takoyaki,
+    chipLabel: CHIP_LABELS.takoyaki,
+  },
+  {
+    key: 'chicken',
+    label: CATEGORY_LABELS.chicken,
+    chipLabel: CHIP_LABELS.chicken,
+  },
+  {
+    key: 'gopchang',
+    label: CATEGORY_LABELS.gopchang,
+    chipLabel: CHIP_LABELS.gopchang,
+  },
+  {
+    key: 'hotteok',
+    label: CATEGORY_LABELS.hotteok,
+    chipLabel: CHIP_LABELS.hotteok,
+  },
+  { key: 'hoe', label: CATEGORY_LABELS.hoe, chipLabel: CHIP_LABELS.hoe },
+  { key: 'other', label: CATEGORY_LABELS.other, chipLabel: CHIP_LABELS.other },
 ];
 
 interface Props {
@@ -41,13 +84,18 @@ export function CategoryTabs({ value, onChange, onPressMap }: Props) {
         contentContainerStyle={styles.row}
       >
         {onPressMap ? (
-          <Pressable style={styles.mapChip} onPress={onPressMap}>
+          <Pressable
+            style={styles.mapChip}
+            onPress={onPressMap}
+            accessibilityRole="button"
+            accessibilityLabel="지도로 보기"
+          >
             <Text
               style={styles.mapChipLabel}
               allowFontScaling
               maxFontSizeMultiplier={1.35}
             >
-              지도로 보기
+              지도
             </Text>
           </Pressable>
         ) : null}
@@ -58,10 +106,7 @@ export function CategoryTabs({ value, onChange, onPressMap }: Props) {
           return (
             <Pressable
               key={tab.key}
-              style={[
-                image ? styles.imageChip : styles.chip,
-                active && (image ? styles.imageChipActive : styles.chipActive),
-              ]}
+              style={[styles.chip, active && styles.chipActive]}
               onPress={() => onChange(tab.key)}
               accessibilityRole="button"
               accessibilityLabel={tab.label}
@@ -74,14 +119,22 @@ export function CategoryTabs({ value, onChange, onPressMap }: Props) {
                   resizeMode="contain"
                 />
               ) : (
+                <View style={styles.allIcon}>
+                  <Text style={[styles.allIconText, active && styles.labelActive]}>
+                    전체
+                  </Text>
+                </View>
+              )}
+              {tab.key !== 'all' ? (
                 <Text
                   style={[styles.label, active && styles.labelActive]}
                   allowFontScaling
-                  maxFontSizeMultiplier={1.35}
+                  maxFontSizeMultiplier={1.2}
+                  numberOfLines={1}
                 >
-                  {tab.label}
+                  {tab.chipLabel}
                 </Text>
-              )}
+              ) : null}
             </Pressable>
           );
         })}
@@ -102,62 +155,65 @@ const styles = StyleSheet.create({
     paddingHorizontal: layout.screenPadding,
     gap: 8,
     paddingBottom: spacing.md,
-    alignItems: 'center',
+    alignItems: 'flex-end',
   },
   chip: {
-    minHeight: layout.chipHeight,
-    paddingHorizontal: 18,
-    paddingVertical: 10,
-    borderRadius: layout.chipRadius,
-    backgroundColor: colors.chip,
-    borderWidth: 1,
-    borderColor: colors.chipBorder,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  chipActive: {
-    backgroundColor: colors.chipActive,
-    borderColor: colors.chipBorderActive,
-  },
-  imageChip: {
-    width: 52,
-    height: 52,
+    minWidth: 56,
+    minHeight: 64,
+    paddingHorizontal: 6,
+    paddingTop: 6,
+    paddingBottom: 6,
     borderRadius: 16,
     backgroundColor: colors.chip,
     borderWidth: 1,
     borderColor: colors.chipBorder,
     justifyContent: 'center',
     alignItems: 'center',
-    padding: 4,
+    gap: 2,
   },
-  imageChipActive: {
+  chipActive: {
     backgroundColor: colors.chipActive,
     borderColor: colors.chipBorderActive,
     borderWidth: 2,
   },
   chipImage: {
-    width: 40,
-    height: 40,
+    width: 32,
+    height: 32,
+  },
+  allIcon: {
+    minHeight: 32,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: 4,
+  },
+  allIconText: {
+    ...typography.chipBold,
+    fontSize: 13,
   },
   label: {
-    ...typography.chip,
+    fontFamily: fonts.medium,
+    fontSize: 11,
+    lineHeight: 14,
+    color: colors.textSecondary,
+    textAlign: 'center',
   },
   labelActive: {
-    ...typography.chipBold,
+    fontFamily: fonts.bold,
+    color: colors.text,
   },
   mapChip: {
-    minHeight: layout.chipHeight,
-    paddingHorizontal: 14,
-    paddingVertical: 10,
-    borderRadius: layout.chipRadius,
+    minWidth: 56,
+    minHeight: 64,
+    paddingHorizontal: 10,
+    borderRadius: 16,
     backgroundColor: colors.text,
     justifyContent: 'center',
     alignItems: 'center',
   },
   mapChipLabel: {
-    ...typography.chipBold,
+    fontFamily: fonts.bold,
     fontSize: 13,
-    lineHeight: 20,
+    lineHeight: 18,
     color: '#FFFFFF',
   },
 });

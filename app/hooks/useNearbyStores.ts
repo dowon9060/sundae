@@ -87,7 +87,7 @@ export function useNearbyStores(
       } catch (e) {
         if (seq !== seqRef.current) return;
         setError(
-          e instanceof Error ? e.message : '판매점을 불러오지 못했습니다.'
+          e instanceof Error ? e.message : '판매점을 불러오지 못했어요.'
         );
       } finally {
         if (seq === seqRef.current) {

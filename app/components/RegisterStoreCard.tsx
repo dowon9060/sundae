@@ -9,8 +9,10 @@ export function RegisterStoreCard({ onPress }: Props) {
   return (
     <View style={styles.wrap}>
       <Pressable style={styles.card} onPress={onPress}>
-        <Text style={styles.title}>순대차 등록</Text>
-        <Text style={styles.sub}>새로운 판매점을 등록 요청해 주세요</Text>
+        <Text style={styles.title}>못 보던 트럭을 봤나요?</Text>
+        <Text style={styles.sub}>
+          위치를 찍어 알려 주시면 확인 후 등록해요
+        </Text>
       </Pressable>
     </View>
   );

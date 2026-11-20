@@ -110,6 +110,6 @@ export function businessStatusLabel(status: BusinessStatus): string {
     case 'confirmed_open':
       return '영업 확인';
     default:
-      return '정보 없음';
+      return '영업 정보 없음';
   }
 }

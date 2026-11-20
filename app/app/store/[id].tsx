@@ -1,3 +1,4 @@
+import { Ionicons } from '@expo/vector-icons';
 import { useLocalSearchParams } from 'expo-router';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import {
@@ -27,7 +28,9 @@ import {
   fetchStoreDetail,
   fetchStoreHours,
   fetchStoreMenus,
+  verifyStorePresence,
 } from '../../services/api';
+import { getCurrentGpsCoords } from '../../services/location';
 import type { NavDestination } from '../../services/navigation';
 import {
   CATEGORY_LABELS,
@@ -50,6 +53,11 @@ export default function StoreDetailScreen() {
   const [reportOpen, setReportOpen] = useState(false);
   const [lightboxOpen, setLightboxOpen] = useState(false);
   const [lightboxIndex, setLightboxIndex] = useState(0);
+  const [verified, setVerified] = useState(false);
+  const [verifyCount, setVerifyCount] = useState(0);
+  const [todayVerifyCount, setTodayVerifyCount] = useState(0);
+  const [verifying, setVerifying] = useState(false);
+  const [verifyError, setVerifyError] = useState<string | null>(null);
   const lastDistanceLocationKeyRef = useRef<string | null>(null);
 
   /** 등록된 실제 사진만 (스톡 제외) — 라이트박스 스와이프용 */
@@ -90,10 +98,14 @@ export default function StoreDetailScreen() {
         setStore(detail);
         setMenus(menuData);
         setHours(hourData.hours);
+        setVerified(Boolean(detail.verified));
+        setVerifyCount(Number(detail.verify_count ?? 0));
+        setTodayVerifyCount(Number(detail.today_verify_count ?? 0));
+        setVerifyError(null);
       } catch (e) {
         if (!cancelled) {
           setError(
-            e instanceof Error ? e.message : '상세 정보를 불러오지 못했습니다.'
+            e instanceof Error ? e.message : '상세 정보를 불러오지 못했어요.'
           );
         }
       } finally {
@@ -131,12 +143,15 @@ export default function StoreDetailScreen() {
         const detail = await fetchStoreDetail(id, location.lat, location.lng);
         if (cancelled) return;
         setStore(detail);
+        setVerified(Boolean(detail.verified));
+        setVerifyCount(Number(detail.verify_count ?? 0));
+        setTodayVerifyCount(Number(detail.today_verify_count ?? 0));
       } catch (e) {
         if (cancelled) return;
         lastDistanceLocationKeyRef.current = null;
         if (__DEV__) {
           const msg =
-            e instanceof Error ? e.message : '거리 정보를 갱신하지 못했습니다.';
+            e instanceof Error ? e.message : '거리를 다시 계산하지 못했어요.';
           console.warn(msg);
         }
       }
@@ -158,7 +173,7 @@ export default function StoreDetailScreen() {
   if (error || !store) {
     return (
       <View style={styles.center}>
-        <Text style={styles.error}>{error || '판매점을 찾을 수 없습니다.'}</Text>
+        <Text style={styles.error}>{error || '판매점을 찾지 못했어요.'}</Text>
       </View>
     );
   }
@@ -189,6 +204,59 @@ export default function StoreDetailScreen() {
     setLightboxOpen(true);
   };
 
+  const onPressVerify = async () => {
+    if (verifying || verified || !store) return;
+    setVerifying(true);
+    setVerifyError(null);
+
+    const prevCount = verifyCount;
+    const prevToday = todayVerifyCount;
+
+    try {
+      const coords = await getCurrentGpsCoords();
+      if (!coords) {
+        setVerifyError(
+          '위치 권한이 필요해요. 설정에서 위치 권한을 켜 주세요.'
+        );
+        return;
+      }
+
+      const result = await verifyStorePresence(store.id, coords);
+      setVerified(result.verified);
+      setVerifyCount(result.verify_count);
+      setTodayVerifyCount(result.today_verify_count);
+      setStore((prev) =>
+        prev
+          ? {
+              ...prev,
+              verified: result.verified,
+              verify_count: result.verify_count,
+              today_verify_count: result.today_verify_count,
+            }
+          : prev
+      );
+    } catch (e) {
+      setVerified(false);
+      setVerifyCount(prevCount);
+      setTodayVerifyCount(prevToday);
+      setVerifyError(
+        e instanceof Error
+          ? e.message
+          : '인증을 저장하지 못했어요. 잠시 후 다시 시도해 주세요.'
+      );
+    } finally {
+      setVerifying(false);
+    }
+  };
+
+  const verifyLabel = verified
+    ? todayVerifyCount > 0
+      ? `오늘 인증 ${todayVerifyCount}`
+      : '오늘 인증함'
+    : todayVerifyCount > 0
+      ? `현장 인증하기 · 오늘 ${todayVerifyCount}`
+      : '현장 인증하기';
+
   return (
     <View style={styles.container}>
       <ScrollView contentContainerStyle={styles.scroll}>
@@ -213,10 +281,45 @@ export default function StoreDetailScreen() {
           ) : null}
           {store.location_stale ? (
             <Text style={styles.stale}>
-              위치가 오래되었을 수 있습니다. 마지막 갱신:{' '}
+              위치가 오래됐을 수 있어요. 마지막 갱신:{' '}
               {store.location_updated_at}
             </Text>
           ) : null}
+
+          <View style={styles.verifyBlock}>
+            <Text style={styles.verifyHint}>
+              판매점 근처 300m 안에서 하루 한 번 인증할 수 있어요.
+              {verifyCount > 0 ? ` 누적 ${verifyCount}회` : ''}
+            </Text>
+            <Pressable
+              style={[
+                styles.verifyBtn,
+                verified && styles.verifyBtnDone,
+                verifying && styles.verifyBtnDisabled,
+              ]}
+              onPress={() => {
+                void onPressVerify();
+              }}
+              disabled={verifying || verified}
+              accessibilityRole="button"
+              accessibilityLabel={verifyLabel}
+              accessibilityState={{ disabled: verifying || verified }}
+            >
+              {verifying ? (
+                <ActivityIndicator size="small" color="#FFFFFF" />
+              ) : (
+                <Ionicons
+                  name={verified ? 'checkmark-circle' : 'location'}
+                  size={18}
+                  color="#FFFFFF"
+                />
+              )}
+              <Text style={styles.verifyBtnText}>{verifyLabel}</Text>
+            </Pressable>
+            {verifyError ? (
+              <Text style={styles.verifyError}>{verifyError}</Text>
+            ) : null}
+          </View>
         </View>
 
         <MenuPhotoGallery
@@ -239,7 +342,7 @@ export default function StoreDetailScreen() {
             style={styles.reportButton}
             onPress={() => setReportOpen(true)}
           >
-            <Text style={styles.reportButtonText}>정보 제보</Text>
+            <Text style={styles.reportButtonText}>정보 제보하기</Text>
           </Pressable>
         </View>
 
@@ -329,6 +432,41 @@ const styles = StyleSheet.create({
     color: colors.danger,
     fontSize: 12,
     marginTop: 6,
+  },
+  verifyBlock: {
+    marginTop: spacing.md,
+    gap: 8,
+  },
+  verifyHint: {
+    ...typography.caption,
+    color: colors.textSecondary,
+  },
+  verifyBtn: {
+    alignSelf: 'flex-start',
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    minHeight: 44,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderRadius: 12,
+    backgroundColor: colors.accent,
+  },
+  verifyBtnDone: {
+    backgroundColor: colors.accentMuted,
+  },
+  verifyBtnDisabled: {
+    opacity: 0.85,
+  },
+  verifyBtnText: {
+    fontFamily: fonts.bold,
+    fontSize: 15,
+    color: '#FFFFFF',
+  },
+  verifyError: {
+    fontFamily: fonts.regular,
+    fontSize: 13,
+    color: colors.danger,
   },
   reportSection: {
     paddingHorizontal: spacing.md,

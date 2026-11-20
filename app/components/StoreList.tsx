@@ -1,6 +1,5 @@
 import { Ionicons } from '@expo/vector-icons';
 import {
-  ActivityIndicator,
   FlatList,
   Pressable,
   RefreshControl,
@@ -12,6 +11,7 @@ import { colors, fonts, layout, spacing, typography } from '../constants/theme';
 import type { NearbyStore } from '../types/store';
 import { DayOfWeekTabs, getTodayDayOfWeek } from './DayOfWeekTabs';
 import { StoreCard } from './StoreCard';
+import { StoreListSkeleton } from './StoreListSkeleton';
 
 interface Props {
   stores: NearbyStore[];
@@ -24,16 +24,11 @@ interface Props {
   onChangeOpenNow?: (value: boolean) => void;
   onRefresh: () => void;
   onPressStore: (id: string) => void;
+  onPressRegister?: () => void;
   onLikeChange?: (storeId: string, liked: boolean, likeCount: number) => void;
-  onVerifyChange?: (
-    storeId: string,
-    verified: boolean,
-    verifyCount: number,
-    todayVerifyCount: number
-  ) => void;
 }
 
-const EMPTY_NO_STORES = '이 요일에 운영하는 판매점이 없습니다.';
+const EMPTY_NO_STORES = '이 요일에 운영하는 판매점이 없어요.';
 
 const DAY_LABELS = ['일', '월', '화', '수', '목', '금', '토'] as const;
 
@@ -41,21 +36,37 @@ function StoreListEmpty({
   error,
   dayOfWeek,
   openNowOnly,
+  onPressRegister,
 }: {
   error: string | null;
   dayOfWeek: number;
   openNowOnly: boolean;
+  onPressRegister?: () => void;
 }) {
   const dayLabel = DAY_LABELS[dayOfWeek] ?? '';
   const emptyText = openNowOnly
-    ? '지금 영업 중인 판매점이 없습니다.'
+    ? '지금 영업 중인 판매점이 없어요.'
     : dayLabel
-      ? `${dayLabel}요일에 운영하는 판매점이 없습니다.`
+      ? `${dayLabel}요일에 운영하는 판매점이 없어요.`
       : EMPTY_NO_STORES;
+
   return (
     <View style={styles.emptyWrap}>
-      <Text style={styles.emptyMain}>휑~~~</Text>
-      <Text style={styles.emptySecondary}>{error || emptyText}</Text>
+      <Ionicons name="storefront-outline" size={40} color={colors.textMuted} />
+      <Text style={styles.emptyMain}>{error || emptyText}</Text>
+      <Text style={styles.emptySecondary}>
+        다른 요일을 눌러 보거나, 아는 곳을 등록해 주세요.
+      </Text>
+      {onPressRegister ? (
+        <Pressable
+          style={styles.emptyCta}
+          onPress={onPressRegister}
+          accessibilityRole="button"
+          accessibilityLabel="순대차 등록하기"
+        >
+          <Text style={styles.emptyCtaText}>등록하기</Text>
+        </Pressable>
+      ) : null}
     </View>
   );
 }
@@ -71,8 +82,8 @@ export function StoreList({
   onChangeOpenNow,
   onRefresh,
   onPressStore,
+  onPressRegister,
   onLikeChange,
-  onVerifyChange,
 }: Props) {
   const isToday = dayOfWeek === getTodayDayOfWeek();
   const visibleStores =
@@ -84,10 +95,7 @@ export function StoreList({
     <View style={styles.container}>
       <View style={styles.header}>
         <Text style={styles.title}>내 주변 판매점</Text>
-        <View style={styles.sortRow}>
-          <Text style={styles.sort}>거리순</Text>
-          <Ionicons name="swap-vertical" size={14} color={colors.textSecondary} />
-        </View>
+        <Text style={styles.sortMeta}>가까운 순</Text>
       </View>
 
       <DayOfWeekTabs value={dayOfWeek} onChange={onChangeDay} />
@@ -114,7 +122,7 @@ export function StoreList({
       ) : null}
 
       {loading && stores.length === 0 ? (
-        <ActivityIndicator color={colors.text} style={{ marginTop: 40 }} />
+        <StoreListSkeleton />
       ) : (
         <FlatList
           data={visibleStores}
@@ -124,7 +132,6 @@ export function StoreList({
               store={item}
               onPress={() => onPressStore(item.id)}
               onLikeChange={onLikeChange}
-              onVerifyChange={onVerifyChange}
             />
           )}
           refreshControl={
@@ -139,6 +146,7 @@ export function StoreList({
               error={error}
               dayOfWeek={dayOfWeek}
               openNowOnly={openNowOnly && isToday}
+              onPressRegister={onPressRegister}
             />
           }
           contentContainerStyle={styles.listContent}
@@ -162,15 +170,9 @@ const styles = StyleSheet.create({
   title: {
     ...typography.subtitle,
   },
-  sortRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 2,
-    paddingVertical: 2,
-  },
-  sort: {
+  sortMeta: {
     ...typography.caption,
-    lineHeight: 20,
+    color: colors.textMuted,
   },
   filterRow: {
     paddingHorizontal: layout.screenPadding,
@@ -178,12 +180,14 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
   },
   filterChip: {
-    paddingHorizontal: 12,
-    paddingVertical: 7,
+    minHeight: 44,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
     borderRadius: 16,
     backgroundColor: colors.chip,
     borderWidth: 1,
     borderColor: colors.chipBorder,
+    justifyContent: 'center',
   },
   filterChipActive: {
     backgroundColor: colors.chipActive,
@@ -204,17 +208,32 @@ const styles = StyleSheet.create({
   },
   emptyWrap: {
     alignItems: 'center',
-    marginTop: 48,
+    marginTop: 40,
     paddingHorizontal: spacing.lg,
     gap: spacing.sm,
   },
   emptyMain: {
-    ...typography.body,
-    color: colors.textMuted,
+    ...typography.bodyMedium,
+    color: colors.text,
     textAlign: 'center',
   },
   emptySecondary: {
     ...typography.caption,
     textAlign: 'center',
+  },
+  emptyCta: {
+    marginTop: spacing.sm,
+    minHeight: 44,
+    paddingHorizontal: 20,
+    paddingVertical: 12,
+    borderRadius: 12,
+    backgroundColor: colors.text,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  emptyCtaText: {
+    fontFamily: fonts.bold,
+    fontSize: 15,
+    color: '#FFFFFF',
   },
 });

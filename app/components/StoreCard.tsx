@@ -3,7 +3,6 @@ import { useEffect, useState } from 'react';
 import {
   ActivityIndicator,
   Image,
-  Platform,
   Pressable,
   StyleSheet,
   Text,
@@ -18,66 +17,26 @@ import {
   layout,
   typography,
 } from '../constants/theme';
-import { toggleStoreLike, verifyStorePresence } from '../services/api';
-import { getCurrentGpsCoords } from '../services/location';
-import {
-  businessStatusLabel,
-  formatDistance,
-  type NearbyStore,
-} from '../types/store';
+import { toggleStoreLike } from '../services/api';
+import { formatDistance, type NearbyStore } from '../types/store';
 
 interface Props {
   store: NearbyStore;
   onPress: () => void;
   onLikeChange?: (storeId: string, liked: boolean, likeCount: number) => void;
-  onVerifyChange?: (
-    storeId: string,
-    verified: boolean,
-    verifyCount: number,
-    todayVerifyCount: number
-  ) => void;
 }
 
-export function StoreCard({
-  store,
-  onPress,
-  onLikeChange,
-  onVerifyChange,
-}: Props) {
-  const statusLabel = businessStatusLabel(store.business_status);
-  const statusColor = store.is_open_now
-    ? colors.accent
-    : store.business_status === 'confirmed_open'
-      ? colors.accent
-      : store.business_status === 'expected'
-        ? colors.accentMuted
-        : colors.textMuted;
-
+export function StoreCard({ store, onPress, onLikeChange }: Props) {
   const closed = Boolean(store.is_closed_on_day);
   const [liked, setLiked] = useState(Boolean(store.liked));
   const [likeCount, setLikeCount] = useState(Number(store.like_count ?? 0));
   const [liking, setLiking] = useState(false);
   const [likeError, setLikeError] = useState<string | null>(null);
-  const [verified, setVerified] = useState(Boolean(store.verified));
-  const [verifyCount, setVerifyCount] = useState(
-    Number(store.verify_count ?? 0)
-  );
-  const [todayVerifyCount, setTodayVerifyCount] = useState(
-    Number(store.today_verify_count ?? 0)
-  );
-  const [verifying, setVerifying] = useState(false);
-  const [verifyError, setVerifyError] = useState<string | null>(null);
 
   useEffect(() => {
     setLiked(Boolean(store.liked));
     setLikeCount(Number(store.like_count ?? 0));
   }, [store.id, store.liked, store.like_count]);
-
-  useEffect(() => {
-    setVerified(Boolean(store.verified));
-    setVerifyCount(Number(store.verify_count ?? 0));
-    setTodayVerifyCount(Number(store.today_verify_count ?? 0));
-  }, [store.id, store.verified, store.verify_count, store.today_verify_count]);
 
   const onPressLike = async () => {
     if (liking) return;
@@ -102,59 +61,14 @@ export function StoreCard({
       setLikeError(
         e instanceof Error
           ? e.message
-          : '좋아요를 반영하지 못했습니다. 잠시 후 다시 시도해 주세요.'
+          : '좋아요를 저장하지 못했어요. 잠시 후 다시 시도해 주세요.'
       );
     } finally {
       setLiking(false);
     }
   };
 
-  const onPressVerify = async () => {
-    if (verifying || verified) return;
-    setVerifying(true);
-    setVerifyError(null);
-
-    const prevCount = verifyCount;
-    const prevToday = todayVerifyCount;
-
-    try {
-      const coords = await getCurrentGpsCoords();
-      if (!coords) {
-        setVerifyError('위치 권한이 필요합니다. 설정에서 위치 권한을 켜 주세요.');
-        return;
-      }
-
-      const result = await verifyStorePresence(store.id, coords);
-      setVerified(result.verified);
-      setVerifyCount(result.verify_count);
-      setTodayVerifyCount(result.today_verify_count);
-      onVerifyChange?.(
-        store.id,
-        result.verified,
-        result.verify_count,
-        result.today_verify_count
-      );
-    } catch (e) {
-      setVerified(false);
-      setVerifyCount(prevCount);
-      setTodayVerifyCount(prevToday);
-      setVerifyError(
-        e instanceof Error
-          ? e.message
-          : '인증을 반영하지 못했습니다. 잠시 후 다시 시도해 주세요.'
-      );
-    } finally {
-      setVerifying(false);
-    }
-  };
-
-  const verifyLabel = verified
-    ? todayVerifyCount > 0
-      ? `오늘 인증 ${todayVerifyCount}`
-      : '오늘 인증함'
-    : todayVerifyCount > 0
-      ? `오늘 인증 ${todayVerifyCount}`
-      : '인증하기';
+  const todayVerify = Number(store.today_verify_count ?? 0);
 
   return (
     <Pressable
@@ -175,6 +89,11 @@ export function StoreCard({
             />
           );
         })()}
+        {store.is_open_now ? (
+          <View style={styles.openBadge}>
+            <Text style={styles.openBadgeText}>영업 중</Text>
+          </View>
+        ) : null}
       </View>
       <View style={styles.body}>
         <View style={styles.nameRow}>
@@ -214,7 +133,10 @@ export function StoreCard({
           </Text>
         ) : null}
         {store.menu_summary ? (
-          <Text style={[styles.menu, closed && styles.textMuted]} numberOfLines={1}>
+          <Text
+            style={[styles.menu, closed && styles.textMuted]}
+            numberOfLines={1}
+          >
             {store.menu_summary}
           </Text>
         ) : null}
@@ -232,47 +154,13 @@ export function StoreCard({
         {store.today_hours_label ? (
           <Text style={[styles.hours, closed && styles.hoursClosed]}>
             {store.today_hours_label}
+            {todayVerify > 0 ? ` · 오늘 인증 ${todayVerify}` : ''}
           </Text>
+        ) : todayVerify > 0 ? (
+          <Text style={styles.hours}>오늘 인증 {todayVerify}</Text>
         ) : null}
-        <Text style={[styles.status, { color: statusColor }]}>
-          {store.is_open_now ? '지금 영업 중' : statusLabel}
-          {store.location_stale ? ' · 위치 정보 오래됨' : ''}
-        </Text>
-        <Pressable
-          style={[
-            styles.verifyBtn,
-            verified && styles.verifyBtnDone,
-            verifying && styles.verifyBtnDisabled,
-          ]}
-          onPress={(e) => {
-            e.stopPropagation?.();
-            void onPressVerify();
-          }}
-          disabled={verifying || verified}
-          accessibilityRole="button"
-          accessibilityLabel={
-            verified
-              ? `오늘 인증됨 ${todayVerifyCount}`
-              : '판매점 300m 안에서 현장 인증하기'
-          }
-        >
-          {verifying ? (
-            <ActivityIndicator size="small" color="#FFFFFF" />
-          ) : (
-            <>
-              <Ionicons
-                name={verified ? 'checkmark-circle' : 'shield-checkmark'}
-                size={14}
-                color="#FFFFFF"
-              />
-              <Text style={styles.verifyBtnText}>{verifyLabel}</Text>
-            </>
-          )}
-        </Pressable>
-        {verifyError ? (
-          <Text style={styles.verifyError} numberOfLines={1}>
-            {verifyError}
-          </Text>
+        {store.location_stale ? (
+          <Text style={styles.stale}>위치가 오래됐을 수 있어요</Text>
         ) : null}
       </View>
     </Pressable>
@@ -290,18 +178,6 @@ const styles = StyleSheet.create({
     marginBottom: layout.cardGap,
     borderWidth: 1,
     borderColor: colors.border,
-    ...Platform.select({
-      ios: {
-        shadowColor: colors.shadow,
-        shadowOpacity: 0.06,
-        shadowRadius: 8,
-        shadowOffset: { width: 0, height: 2 },
-      },
-      android: {
-        elevation: 2,
-      },
-      default: {},
-    }),
   },
   thumbWrap: {
     width: '48%',
@@ -317,6 +193,22 @@ const styles = StyleSheet.create({
   thumbPlaceholder: {
     backgroundColor: '#FFF3E8',
     padding: 8,
+  },
+  openBadge: {
+    position: 'absolute',
+    left: 8,
+    bottom: 8,
+    backgroundColor: colors.accent,
+    borderRadius: 8,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+  },
+  openBadgeText: {
+    fontFamily: fonts.bold,
+    fontSize: 12,
+    lineHeight: fontLine(12),
+    color: '#FFFFFF',
+    ...androidFont,
   },
   body: {
     flex: 1,
@@ -342,9 +234,10 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 3,
-    minWidth: 40,
-    paddingVertical: 2,
-    paddingHorizontal: 2,
+    minWidth: 44,
+    minHeight: 44,
+    paddingHorizontal: 4,
+    justifyContent: 'center',
   },
   likeCount: {
     fontFamily: fonts.medium,
@@ -359,8 +252,8 @@ const styles = StyleSheet.create({
   },
   likeError: {
     fontFamily: fonts.regular,
-    fontSize: 11,
-    lineHeight: fontLine(11),
+    fontSize: 12,
+    lineHeight: fontLine(12),
     color: colors.danger,
     ...androidFont,
   },
@@ -382,46 +275,17 @@ const styles = StyleSheet.create({
   hoursClosed: {
     color: colors.textMuted,
   },
+  stale: {
+    fontFamily: fonts.regular,
+    fontSize: 12,
+    lineHeight: fontLine(12),
+    color: colors.danger,
+    ...androidFont,
+  },
   cardClosed: {
     opacity: 0.72,
   },
   textMuted: {
     color: colors.textMuted,
-  },
-  status: {
-    ...typography.status,
-    marginTop: 2,
-  },
-  verifyBtn: {
-    marginTop: 8,
-    alignSelf: 'flex-start',
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-    backgroundColor: colors.accent,
-    borderRadius: 8,
-    paddingVertical: 7,
-    paddingHorizontal: 12,
-    minHeight: 32,
-  },
-  verifyBtnDone: {
-    backgroundColor: colors.accentMuted,
-  },
-  verifyBtnDisabled: {
-    opacity: 0.85,
-  },
-  verifyBtnText: {
-    fontFamily: fonts.bold,
-    fontSize: 13,
-    lineHeight: fontLine(13),
-    color: '#FFFFFF',
-    ...androidFont,
-  },
-  verifyError: {
-    fontFamily: fonts.regular,
-    fontSize: 11,
-    lineHeight: fontLine(11),
-    color: colors.danger,
-    ...androidFont,
   },
 });

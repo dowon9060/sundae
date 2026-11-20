@@ -31,7 +31,7 @@ async function acquireSlot(): Promise<void> {
   const run = async () => {
     if (Date.now() - queuedAt > MAX_QUEUE_WAIT_MS) {
       throw new ApiRateLimitError(
-        '요청이 지연되고 있습니다. 잠시 후 다시 시도해 주세요.'
+        '요청이 늦어지고 있어요. 잠시 후 다시 시도해 주세요.'
       );
     }
 
@@ -40,7 +40,7 @@ async function acquireSlot(): Promise<void> {
 
     if (windowStarts.length >= MAX_PER_WINDOW) {
       throw new ApiRateLimitError(
-        '요청이 너무 많습니다. 잠시 후 다시 시도해 주세요.'
+        '요청이 너무 많아요. 잠시 후 다시 시도해 주세요.'
       );
     }
 
@@ -83,11 +83,11 @@ export async function apiFetch(
     } catch (e) {
       if (e instanceof Error && e.name === 'AbortError') {
         throw new Error(
-          '서버 응답이 지연되고 있습니다. 잠시 후 다시 시도해 주세요.'
+          '서버 응답이 늦어지고 있어요. 잠시 후 다시 시도해 주세요.'
         );
       }
       throw new Error(
-        '판매 정보를 불러오지 못했습니다. 아래로 당겨 다시 시도해 주세요.'
+        '판매 정보를 불러오지 못했어요. 아래로 당겨 다시 시도해 주세요.'
       );
     } finally {
       clearTimeout(timer);

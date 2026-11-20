@@ -51,7 +51,7 @@ export function StoreMap({
             <Text style={styles.place} numberOfLines={1}>
               {note || address}
             </Text>
-            <Text style={styles.cta}>지도 보기</Text>
+            <Text style={styles.cta}>지도 열기</Text>
           </View>
         </Pressable>
       </View>

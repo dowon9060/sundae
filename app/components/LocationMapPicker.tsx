@@ -37,9 +37,9 @@ export function LocationMapPicker({
   initialLat,
   initialLng,
   title = '지도에서 위치 선택',
-  hint = '지도를 움직이면 중앙의 내 위치가 바뀝니다. 멈춘 뒤 주소를 확인하고 설정하세요.',
+  hint = '지도를 움직이면 가운데 핀 위치가 바뀌어요. 원하는 자리에서 멈춰 주소를 확인한 뒤 설정해 주세요.',
   pinLabel = '내 위치',
-  confirmLabel = '이 위치로 내 위치 설정',
+  confirmLabel = '이 위치로 설정하기',
   onClose,
   onConfirm,
 }: Props) {
@@ -111,7 +111,7 @@ export function LocationMapPicker({
         setError(
           err instanceof Error
             ? err.message
-            : '위치를 저장하지 못했습니다. 다시 시도해 주세요.'
+            : '위치를 저장하지 못했어요. 다시 시도해 주세요.'
         );
       } finally {
         setSaving(false);

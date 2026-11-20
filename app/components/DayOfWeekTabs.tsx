@@ -74,7 +74,7 @@ const styles = StyleSheet.create({
     flex: 1,
     minHeight: layout.dayChipHeight,
     minWidth: 36,
-    paddingVertical: 8,
+    paddingVertical: 10,
     borderRadius: 20,
     backgroundColor: colors.chip,
     borderWidth: 1,

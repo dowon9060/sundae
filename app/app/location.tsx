@@ -55,7 +55,11 @@ export default function LocationScreen() {
           setResults(data);
         } catch (e) {
           if (requestId !== requestIdRef.current) return;
-          setError(e instanceof Error ? e.message : '검색에 실패했습니다.');
+          setError(
+            e instanceof Error
+              ? e.message
+              : '검색하지 못했어요. 잠시 후 다시 시도해 주세요.'
+          );
           setResults([]);
         } finally {
           if (requestId === requestIdRef.current) {
@@ -81,7 +85,9 @@ export default function LocationScreen() {
     try {
       const gps = await refreshGps();
       if (!gps) {
-        setError('현재 위치를 가져오지 못했습니다. 권한을 확인해 주세요.');
+        setError(
+          '위치를 가져오지 못했어요. 설정에서 위치 권한을 켜 주세요.'
+        );
         return;
       }
       router.back();
@@ -119,7 +125,7 @@ export default function LocationScreen() {
         ) : (
           <View style={styles.gpsContent}>
             <Ionicons name="locate-outline" size={20} color={colors.text} />
-            <Text style={styles.gpsLabel}>현재 GPS 위치로 설정</Text>
+            <Text style={styles.gpsLabel}>현재 위치로 설정하기</Text>
           </View>
         )}
       </Pressable>
@@ -143,7 +149,7 @@ export default function LocationScreen() {
         keyboardShouldPersistTaps="handled"
         ListEmptyComponent={
           canSearch && !searching && !error ? (
-            <Text style={styles.empty}>검색 결과가 없습니다.</Text>
+            <Text style={styles.empty}>검색 결과가 없어요.</Text>
           ) : (
             <View />
           )

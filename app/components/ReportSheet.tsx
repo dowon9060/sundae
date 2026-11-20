@@ -66,7 +66,9 @@ export function ReportSheet({
       onSubmitted?.();
     } catch (e) {
       setError(
-        e instanceof Error ? e.message : '제보를 보내지 못했습니다. 잠시 후 다시 시도해 주세요.'
+        e instanceof Error
+          ? e.message
+          : '제보를 보내지 못했어요. 잠시 후 다시 시도해 주세요.'
       );
     } finally {
       setSubmitting(false);
@@ -89,7 +91,7 @@ export function ReportSheet({
                 <Text style={styles.title}>제보 완료</Text>
                 <Text style={styles.doneText}>{doneMessage}</Text>
                 <Pressable style={styles.primaryButton} onPress={onClose}>
-                  <Text style={styles.primaryButtonText}>확인</Text>
+                  <Text style={styles.primaryButtonText}>닫기</Text>
                 </Pressable>
               </View>
             ) : (

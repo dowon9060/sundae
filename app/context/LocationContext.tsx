@@ -93,7 +93,7 @@ export function LocationProvider({ children }: { children: ReactNode }) {
       commitLocation(saved ?? DEFAULT_LOCATION);
       return null;
     } catch (e) {
-      setError(e instanceof Error ? e.message : '위치를 가져오지 못했습니다.');
+      setError(e instanceof Error ? e.message : '위치를 가져오지 못했어요.');
       const saved = await loadSavedLocation();
       if (!locationRef.current) {
         commitLocation(saved ?? DEFAULT_LOCATION);
@@ -150,7 +150,7 @@ export function LocationProvider({ children }: { children: ReactNode }) {
       } catch (e) {
         if (!cancelled) {
           setError(
-            e instanceof Error ? e.message : '위치를 가져오지 못했습니다.'
+            e instanceof Error ? e.message : '위치를 가져오지 못했어요.'
           );
           if (!locationRef.current) {
             const saved = await loadSavedLocation();

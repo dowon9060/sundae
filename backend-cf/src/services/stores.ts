@@ -442,7 +442,8 @@ export async function getStoreById(
   env: Env,
   id: string,
   userLat?: number,
-  userLng?: number
+  userLng?: number,
+  clientId?: string
 ) {
   const staleDays = Number(env.LOCATION_STALE_DAYS || '14');
   const row = await env.DB.prepare(
@@ -467,11 +468,19 @@ export async function getStoreById(
     distance_m = Math.round(haversineMeters(userLat, userLng, row.lat, row.lng));
   }
 
+  const [todayCounts, verifiedIds] = await Promise.all([
+    getTodayVerifyCounts(env, [id]),
+    clientId ? getVerifiedStoreIds(env, clientId, [id]) : Promise.resolve(null),
+  ]);
+
   return {
-    ...row,
+    ...omitPhotoUrls(row),
     photo_urls: parsePhotoUrls(row.photo_urls, row.photo_url),
     distance_m,
     location_stale: isLocationStale(row.location_updated_at, staleDays),
+    verify_count: Number(row.verify_count ?? 0),
+    today_verify_count: todayCounts.get(id) ?? 0,
+    verified: verifiedIds ? verifiedIds.has(id) : false,
   };
 }
 

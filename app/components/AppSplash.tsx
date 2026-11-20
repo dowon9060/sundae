@@ -10,7 +10,7 @@ export function AppSplash() {
         <Image source={appLogo} style={styles.logo} resizeMode="contain" />
       </View>
       <Text style={styles.brand}>순대차</Text>
-      <Text style={styles.sub}>내 주변 이동식 판매점</Text>
+      <Text style={styles.sub}>오늘 우리 동네에 오는 트럭</Text>
     </View>
   );
 }

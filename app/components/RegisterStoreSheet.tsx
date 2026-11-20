@@ -78,7 +78,7 @@ async function toCompressedDataUrl(uri: string): Promise<string> {
     { compress: 0.55, format: ImageManipulator.SaveFormat.JPEG, base64: true }
   );
   if (!manipulated.base64) {
-    throw new Error('사진을 준비하지 못했습니다. 다시 첨부해 주세요.');
+    throw new Error('사진을 준비하지 못했어요. 다시 첨부해 주세요.');
   }
   return `data:image/jpeg;base64,${manipulated.base64}`;
 }
@@ -148,7 +148,9 @@ export function RegisterStoreSheet({ visible, onClose }: Props) {
     try {
       const gps = await getCurrentGpsCoords();
       if (!gps) {
-        setError('위치 권한이 필요합니다. 설정에서 위치 접근을 허용해 주세요.');
+        setError(
+          '위치 권한을 켜면 현재 위치로 선택할 수 있어요. 설정에서 위치 권한을 켜 주세요.'
+        );
         return;
       }
       setPickerStart(gps);
@@ -156,7 +158,7 @@ export function RegisterStoreSheet({ visible, onClose }: Props) {
       setError(
         e instanceof Error
           ? e.message
-          : '현재 위치를 가져오지 못했습니다. 잠시 후 다시 시도해 주세요.'
+          : '현재 위치를 가져오지 못했어요. 잠시 후 다시 시도해 주세요.'
       );
     } finally {
       setGpsLoading(false);
@@ -175,7 +177,9 @@ export function RegisterStoreSheet({ visible, onClose }: Props) {
       const permission =
         await ImagePicker.requestMediaLibraryPermissionsAsync();
       if (!permission.granted) {
-        setError('사진 접근 권한이 필요합니다. 설정에서 허용해 주세요.');
+        setError(
+          '사진 권한을 켜면 앨범에서 첨부할 수 있어요. 설정에서 사진 권한을 켜 주세요.'
+        );
         return;
       }
 
@@ -197,7 +201,7 @@ export function RegisterStoreSheet({ visible, onClose }: Props) {
       setError(
         e instanceof Error
           ? e.message
-          : '사진을 첨부하지 못했습니다. 잠시 후 다시 시도해 주세요.'
+          : '사진을 첨부하지 못했어요. 잠시 후 다시 시도해 주세요.'
       );
     }
   };
@@ -207,7 +211,9 @@ export function RegisterStoreSheet({ visible, onClose }: Props) {
     try {
       const permission = await ImagePicker.requestCameraPermissionsAsync();
       if (!permission.granted) {
-        setError('카메라 권한이 필요합니다. 설정에서 허용해 주세요.');
+        setError(
+          '카메라 권한을 켜면 촬영할 수 있어요. 설정에서 카메라 권한을 켜 주세요.'
+        );
         return;
       }
 
@@ -228,19 +234,19 @@ export function RegisterStoreSheet({ visible, onClose }: Props) {
       setError(
         e instanceof Error
           ? e.message
-          : '사진을 촬영하지 못했습니다. 잠시 후 다시 시도해 주세요.'
+          : '사진을 찍지 못했어요. 잠시 후 다시 시도해 주세요.'
       );
     }
   };
 
   const choosePhotoSource = (key: PhotoKey) => {
-    Alert.alert(`${PHOTO_LABELS[key]} 사진 첨부`, '첨부 방법을 선택해 주세요.', [
-      { text: '앨범', onPress: () => void pickPhoto(key) },
-      { text: '촬영', onPress: () => void takePhoto(key) },
+    Alert.alert(`${PHOTO_LABELS[key]} 사진 첨부`, '어떻게 첨부할까요?', [
+      { text: '앨범에서 선택', onPress: () => void pickPhoto(key) },
+      { text: '촬영하기', onPress: () => void takePhoto(key) },
       ...(photos[key]
         ? [
             {
-              text: '삭제',
+              text: '삭제하기',
               style: 'destructive' as const,
               onPress: () =>
                 setPhotos((prev) => {
@@ -251,7 +257,7 @@ export function RegisterStoreSheet({ visible, onClose }: Props) {
             },
           ]
         : []),
-      { text: '취소', style: 'cancel' },
+      { text: '닫기', style: 'cancel' },
     ]);
   };
 
@@ -269,7 +275,7 @@ export function RegisterStoreSheet({ visible, onClose }: Props) {
       Boolean(photos.menu || photos.location || photos.truck);
 
     if (!hasAnything) {
-      setError('내용을 하나 이상 입력해 주세요.');
+      setError('내용을 하나 이상 적어 주세요.');
       return;
     }
 
@@ -293,7 +299,7 @@ export function RegisterStoreSheet({ visible, onClose }: Props) {
       setError(
         e instanceof Error
           ? e.message
-          : '등록 요청을 보내지 못했습니다. 잠시 후 다시 시도해 주세요.'
+          : '등록 요청을 보내지 못했어요. 잠시 후 다시 시도해 주세요.'
       );
     } finally {
       setSubmitting(false);
@@ -428,7 +434,7 @@ export function RegisterStoreSheet({ visible, onClose }: Props) {
                   {gpsLoading ? (
                     <ActivityIndicator color={colors.text} />
                   ) : (
-                    <Text style={styles.gpsBtnText}>현위치로 선택</Text>
+                    <Text style={styles.gpsBtnText}>현재 위치로 선택하기</Text>
                   )}
                 </Pressable>
                 {pickedCoord ? (
@@ -493,7 +499,7 @@ export function RegisterStoreSheet({ visible, onClose }: Props) {
                 {submitting ? (
                   <ActivityIndicator color="#FFFFFF" />
                 ) : (
-                  <Text style={styles.submitText}>등록 요청</Text>
+                  <Text style={styles.submitText}>등록 요청하기</Text>
                 )}
               </Pressable>
             </ScrollView>
@@ -505,9 +511,9 @@ export function RegisterStoreSheet({ visible, onClose }: Props) {
             initialLat={pickerStart.lat}
             initialLng={pickerStart.lng}
             title="판매 위치 선택"
-            hint="지도를 움직여 핀을 순대차 위치에 맞춘 뒤 선택하세요."
+            hint="지도를 움직여 핀을 순대차 위치에 맞춘 뒤 선택해 주세요."
             pinLabel="순대차 위치"
-            confirmLabel="이 위치로 선택"
+            confirmLabel="이 위치로 선택하기"
             onClose={() => setPickerStart(null)}
             onConfirm={(lat, lng, address) => {
               setPickedCoord({ lat, lng });

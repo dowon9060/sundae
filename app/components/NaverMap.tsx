@@ -531,10 +531,10 @@ export function NaverMap({
   if (!NCP_KEY_ID) {
     return (
       <View style={[styles.wrap, styles.fallback, style]}>
-        <Text style={styles.fallbackTitle}>네이버 지도 키가 필요합니다</Text>
+        <Text style={styles.fallbackTitle}>네이버 지도 키가 필요해요</Text>
         <Text style={styles.fallbackBody}>
           app/.env에 EXPO_PUBLIC_NCP_KEY_ID를 넣고, NCP 콘솔 Web 서비스 URL에
-          http://localhost 를 등록한 뒤 앱을 다시 시작하세요.
+          http://localhost 를 등록한 뒤 앱을 다시 시작해 주세요.
         </Text>
       </View>
     );
@@ -543,7 +543,7 @@ export function NaverMap({
   if (authFailed) {
     return (
       <View style={[styles.wrap, styles.fallback, style]}>
-        <Text style={styles.fallbackTitle}>네이버 지도 인증에 실패했습니다</Text>
+        <Text style={styles.fallbackTitle}>네이버 지도 인증에 실패했어요</Text>
         <Text style={styles.fallbackBody}>
           NCP 콘솔에서 Maps Application의 Dynamic Map을 켜고, Web 서비스 URL에
           https://localhost 와 http://localhost 를 등록한 뒤 앱을 다시 설치해

@@ -139,8 +139,8 @@ export function NearbyMapModal({
 
         <View style={styles.hintRow}>
           <Text style={styles.hint}>
-            지도를 옮기면 중앙 핀 기준으로 주변 판매점을 불러옵니다
-            {mapStores.length > 0 ? ` · ${mapStores.length}곳` : ''}.
+            지도를 옮기면 가운데 핀 기준으로 주변 판매점을 불러와요
+            {mapStores.length > 0 ? `, ${mapStores.length}곳` : ''}.
           </Text>
           {loadingNearby ? (
             <ActivityIndicator size="small" color={colors.textSecondary} />

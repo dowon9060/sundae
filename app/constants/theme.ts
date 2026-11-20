@@ -41,7 +41,7 @@ export const layout = {
   chipRadius: 22,
   /** Noto Sans KR + Android 여유 (폴드 배율 포함) */
   chipHeight: 44,
-  dayChipHeight: 40,
+  dayChipHeight: 44,
 };
 
 export const fonts = {
@@ -95,5 +95,5 @@ export const typography = {
   chipBold: typeStyle(fonts.bold, 14, colors.text),
   dayChip: typeStyle(fonts.medium, 13, colors.textSecondary),
   dayChipBold: typeStyle(fonts.bold, 13, colors.text),
-  micro: typeStyle(fonts.medium, 11, colors.text),
+  micro: typeStyle(fonts.medium, 12, colors.text),
 };

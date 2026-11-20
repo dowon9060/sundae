@@ -42,8 +42,12 @@ export default function HomeScreen() {
     }
   }, []);
 
-  const { stores, loading, error, refresh, updateStoreLike, updateStoreVerify } =
-    useNearbyStores(location?.lat, location?.lng, category, dayOfWeek);
+  const { stores, loading, error, refresh, updateStoreLike } = useNearbyStores(
+    location?.lat,
+    location?.lng,
+    category,
+    dayOfWeek
+  );
 
   // 지도: 전체 카테고리 조회 (아이콘 구분용)
   const { stores: mapStoresRaw, refresh: refreshMap } = useNearbyStores(
@@ -95,7 +99,7 @@ export default function HomeScreen() {
       />
       {permissionDenied ? (
         <Text style={styles.hint}>
-          위치 권한이 꺼져 있어 저장된 주소로 검색합니다.
+          위치 권한이 꺼져 있어 저장된 주소로 찾아요.
         </Text>
       ) : null}
       {hint && stores.length > 0 ? (
@@ -118,8 +122,8 @@ export default function HomeScreen() {
         error={listMessage}
         onRefresh={onRefresh}
         onPressStore={(id) => router.push(`/store/${id}`)}
+        onPressRegister={() => setRegisterOpen(true)}
         onLikeChange={updateStoreLike}
-        onVerifyChange={updateStoreVerify}
       />
       <RegisterStoreCard onPress={() => setRegisterOpen(true)} />
       <RegisterStoreSheet

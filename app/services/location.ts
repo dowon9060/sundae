@@ -75,7 +75,7 @@ export async function reverseGeocodeAddress(
 function withTimeout<T>(promise: Promise<T>, ms: number, label: string): Promise<T> {
   return new Promise<T>((resolve, reject) => {
     const timer = setTimeout(() => {
-      reject(new Error(`${label} 시간이 초과되었습니다.`));
+      reject(new Error(`${label} 시간이 초과됐어요.`));
     }, ms);
     promise.then(
       (value) => {

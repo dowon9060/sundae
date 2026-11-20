@@ -56,7 +56,7 @@ export async function openNavigation(
 
   Alert.alert(
     '길찾기 불가',
-    `${urls.label}을(를) 열 수 없습니다. 앱 설치 또는 브라우저를 확인해 주세요.`
+    `${urls.label}을(를) 열 수 없어요. 앱 설치나 브라우저를 확인해 주세요.`
   );
 }
 
@@ -74,7 +74,7 @@ export async function openNaverMapPlace(dest: NavDestination): Promise<void> {
 
   Alert.alert(
     '지도 열기 실패',
-    '네이버 지도를 열 수 없습니다. 앱 설치 또는 브라우저를 확인해 주세요.'
+    '네이버 지도를 열 수 없어요. 앱 설치나 브라우저를 확인해 주세요.'
   );
 }
 
